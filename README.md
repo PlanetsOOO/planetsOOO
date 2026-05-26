@@ -1,17 +1,21 @@
 # Orbit — Solar System Explorer
 
-A hobbyist 3D solar system explorer built with **Next.js**, **Tailwind CSS**, and **Three.js**. Fly through a stylized solar system with NASA-derived textures and **live planetary facts** from official NASA public APIs.
+**Live:** [planets.ooo](https://planets.ooo)
+
+A 3D solar system explorer built with **Next.js**, **Tailwind CSS**, and **Three.js**. Fly through the system with NASA-derived textures, JPL ephemerides, and live planetary facts from official NASA public APIs.
 
 ## Features
 
 - WASD + pointer-lock flight with gradual acceleration and coasting
 - **Tab** exits flight mode for normal mouse/keyboard access
 - Planet info from **NASA/JPL Horizons** (diameter, rotation, orbit, temperature, mass)
-- Supplemental copy and moon counts aligned with **NASA Science** (science.nasa.gov)
-- Click a planet for a dismissible fact panel with source links
-- Orbit paths and labels toggled from a faint top-right menu (off by default)
-- Real-sky backdrop: Hipparcos stars (mag ≤ 6), IAU constellation stick figures, bright DSOs (Messier, LMC/SMC, etc.), Milky Way band — all at true angular scale on a distant celestial sphere (~334 AU)
-- **True scale & distance**: 1 scene unit = 1,000 km; JPL Keplerian orbits (eccentricity + inclination); no artificial planet enlargement
+- Supplemental copy and moon counts aligned with **NASA Science**
+- Scenic discovery tour with autopilot orbit and cinematic chrome
+- Route planner and lightspeed transit between bodies
+- Earth approach and satellite-based landing cinematics
+- Optional AI flight guide and Imagine transit effects (xAI Grok — requires API key)
+- Real-sky backdrop: Hipparcos stars (mag ≤ 6), IAU constellation stick figures, bright DSOs, Milky Way band
+- **True scale & distance**: 1 scene unit = 1,000 km; JPL Keplerian orbits; sub-pixel bodies at true angular diameter
 
 ## Scale model
 
@@ -25,17 +29,40 @@ A hobbyist 3D solar system explorer built with **Next.js**, **Tailwind CSS**, an
 
 At true scale most planets appear as points until you fly close — that is physically correct. Toggle **Labels** in the menu to identify distant bodies.
 
-## Quick start
+## Quick start (local)
 
 ```bash
 npm install
-npm run textures      # planetary surface maps → public/textures/
+npm run textures       # planetary surface maps → public/textures/
 npm run sync:celestial # stars, constellations, bright DSOs → public/data/
-npm run sync:nasa     # NASA Horizons snapshot → public/data/nasa-snapshot.json
+npm run sync:nasa      # NASA Horizons snapshot → public/data/nasa-snapshot.json
 npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000).
+Then open [http://localhost:3000](http://localhost:3000).
+
+> **Note:** `localhost:3000` is only for local development. The deployed site is at [planets.ooo](https://planets.ooo).
+
+### Optional: AI features
+
+Copy the example env file and add your xAI key:
+
+```bash
+cp .env.example .env
+```
+
+Set `XAI_API_KEY` in `.env` for `/api/ai/guide` and `/api/ai/imagine`. The app runs without it; those routes return a helpful error instead.
+
+## Deployment
+
+This app is designed for [Vercel](https://vercel.com):
+
+1. Import the GitHub repository
+2. Add `XAI_API_KEY` (and optional `XAI_MODEL`, `XAI_BASE_URL`) under **Environment Variables**
+3. Deploy — Next.js is auto-detected
+4. Add your custom domain under **Settings → Domains**
+
+Static assets in `public/textures/` and `public/data/` are committed so production builds do not need the sync scripts.
 
 ## NASA data sources
 
@@ -48,7 +75,7 @@ Open [http://localhost:3000](http://localhost:3000).
 
 **API routes**
 
-- `GET /api/planets/[id]` — fetches live Horizons data (cached 24h), falls back to `public/data/nasa-snapshot.json`
+- `GET /api/planets/[id]` — live Horizons data (cached 24h), falls back to `public/data/nasa-snapshot.json`
 - `GET /api/planets` — all bodies
 
 Refresh the local snapshot periodically:
@@ -71,21 +98,7 @@ npm run sync:nasa
 
 ## Accuracy note
 
-3D positions and sizes are **stylized** for exploration, not to scale. Numeric facts in the info panel come from NASA/JPL Horizons and NASA Science pages. Textures are visualization-grade, not for scientific analysis.
-
-## Phase 1 (baseline)
-
-Git tag **`phase-1`** marks the first stable save point: solar system explorer, scenic tour / discovery autopilot, Grok Imagine transit effects, Moon, route planner, free flight — **without** landing/collision or moon-showcase jitter fixes.
-
-**Roll back to Phase 1:**
-
-```bash
-git fetch origin   # if using a remote
-git checkout phase-1
-# or reset current branch: git reset --hard phase-1
-```
-
-**Compare against Phase 1:** `git diff phase-1`
+Orbital mechanics and numeric facts come from NASA/JPL Horizons and NASA Science. Textures and some cinematic transitions are visualization-grade, not for scientific analysis.
 
 ## License
 
