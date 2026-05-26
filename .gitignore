@@ -39,3 +39,6 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# generated landing videos (manifest.json is tracked)
+/public/data/landings/videos/*.webm

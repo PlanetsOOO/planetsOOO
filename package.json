@@ -1,17 +1,27 @@
 {
-  "name": "tmp-app",
+  "name": "planets-ooo",
   "version": "0.1.0",
   "private": true,
   "scripts": {
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "textures": "bash scripts/download-textures.sh",
+    "sync:celestial": "bash scripts/sync-celestial-data.sh",
+    "sync:iss": "node scripts/sync-iss-tle.mjs",
+    "sync:nasa": "node scripts/sync-nasa-data.mjs",
+    "verify:astronomy": "node scripts/verify-astronomy.mjs"
   },
   "dependencies": {
+    "@react-three/drei": "^10.7.7",
+    "@react-three/fiber": "^9.6.1",
+    "@types/three": "^0.184.1",
     "next": "16.2.6",
     "react": "19.2.4",
-    "react-dom": "19.2.4"
+    "react-dom": "19.2.4",
+    "satellite.js": "^7.0.1",
+    "three": "^0.184.0"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",

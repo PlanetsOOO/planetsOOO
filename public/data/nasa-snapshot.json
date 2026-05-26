@@ -1,0 +1,277 @@
+{
+  "version": 1,
+  "generatedAt": "2026-05-20T18:56:40.657Z",
+  "provider": "NASA/JPL Horizons System",
+  "bodies": {
+    "sun": {
+      "id": "sun",
+      "name": "Sun",
+      "fetchedAt": "2026-05-20T18:56:40.657Z",
+      "sources": {
+        "horizons": {
+          "name": "NASA/JPL Horizons System",
+          "url": "https://ssd.jpl.nasa.gov/horizons/"
+        },
+        "science": {
+          "name": "NASA Science",
+          "url": "https://science.nasa.gov/sun/facts/"
+        },
+        "imagery": {
+          "name": "NASA Solar Dynamics Observatory (SDO)",
+          "url": "https://www.nasa.gov/mission_pages/sdo/main/index.html"
+        }
+      },
+      "diameterKm": 1391400,
+      "massDescription": "~1988410",
+      "siderealDay": "25.38 d",
+      "orbitalPeriod": null,
+      "meanTemperature": "5772",
+      "distanceAu": 0,
+      "moons": 0,
+      "description": "The Sun is a G-type main-sequence star containing more than 99% of the solar system's mass.",
+      "missions": "SDO · Parker Solar Probe · SOHO",
+      "imageryCredit": "NASA Solar Dynamics Observatory (SDO)",
+      "horizonsId": "10"
+    },
+    "mercury": {
+      "id": "mercury",
+      "name": "Mercury",
+      "fetchedAt": "2026-05-20T18:56:40.657Z",
+      "sources": {
+        "horizons": {
+          "name": "NASA/JPL Horizons System",
+          "url": "https://ssd.jpl.nasa.gov/horizons/"
+        },
+        "science": {
+          "name": "NASA Science",
+          "url": "https://science.nasa.gov/mercury/facts/"
+        },
+        "imagery": {
+          "name": "NASA/USGS MESSENGER global mosaic",
+          "url": "https://science.nasa.gov/mercury/"
+        }
+      },
+      "diameterKm": 4878.8,
+      "massDescription": "3.302",
+      "siderealDay": "58.6463 d",
+      "orbitalPeriod": "0.2408467 y",
+      "meanTemperature": "440",
+      "distanceAu": 0.387,
+      "moons": 0,
+      "description": "Mercury is the smallest planet and closest to the Sun.",
+      "missions": "MESSENGER · Mariner 10",
+      "imageryCredit": "NASA/USGS MESSENGER global mosaic",
+      "horizonsId": "199"
+    },
+    "venus": {
+      "id": "venus",
+      "name": "Venus",
+      "fetchedAt": "2026-05-20T18:56:40.657Z",
+      "sources": {
+        "horizons": {
+          "name": "NASA/JPL Horizons System",
+          "url": "https://ssd.jpl.nasa.gov/horizons/"
+        },
+        "science": {
+          "name": "NASA Science",
+          "url": "https://science.nasa.gov/venus/facts/"
+        },
+        "imagery": {
+          "name": "NASA Magellan radar topography",
+          "url": "https://science.nasa.gov/venus/"
+        }
+      },
+      "diameterKm": 12103.68,
+      "massDescription": "48.685",
+      "siderealDay": "243.018484 d Sid. Rot. Rate (rad/s)= -0.00000029924",
+      "orbitalPeriod": null,
+      "meanTemperature": "735",
+      "distanceAu": 0.723,
+      "moons": 0,
+      "description": "Venus has a thick CO₂ atmosphere and volcanic surface features.",
+      "missions": "Magellan · VERITAS · DAVINCI",
+      "imageryCredit": "NASA Magellan radar topography",
+      "horizonsId": "299"
+    },
+    "earth": {
+      "id": "earth",
+      "name": "Earth",
+      "fetchedAt": "2026-05-20T18:56:40.657Z",
+      "sources": {
+        "horizons": {
+          "name": "NASA/JPL Horizons System",
+          "url": "https://ssd.jpl.nasa.gov/horizons/"
+        },
+        "science": {
+          "name": "NASA Science",
+          "url": "https://science.nasa.gov/earth/facts/"
+        },
+        "imagery": {
+          "name": "NASA Blue Marble Next Generation",
+          "url": "https://visibleearth.nasa.gov/"
+        }
+      },
+      "diameterKm": 12742.02,
+      "massDescription": "5.97219+-0.0006",
+      "siderealDay": "23.9344695944",
+      "orbitalPeriod": "1.0000174 y",
+      "meanTemperature": "287.6",
+      "distanceAu": 1,
+      "moons": 1,
+      "description": "Earth is the only known planet with stable liquid surface water and life.",
+      "missions": "Earth Observing System · DSCOVR/EPIC",
+      "imageryCredit": "NASA Blue Marble Next Generation",
+      "horizonsId": "399"
+    },
+    "mars": {
+      "id": "mars",
+      "name": "Mars",
+      "fetchedAt": "2026-05-20T18:56:40.657Z",
+      "sources": {
+        "horizons": {
+          "name": "NASA/JPL Horizons System",
+          "url": "https://ssd.jpl.nasa.gov/horizons/"
+        },
+        "science": {
+          "name": "NASA Science",
+          "url": "https://science.nasa.gov/mars/facts/"
+        },
+        "imagery": {
+          "name": "NASA/USGS Mars MOLA mosaic",
+          "url": "https://science.nasa.gov/mars/"
+        }
+      },
+      "diameterKm": 6779.84,
+      "massDescription": "6.4171",
+      "siderealDay": "24.622962 hr",
+      "orbitalPeriod": "1.88081578 y Visual mag. V(1,0)",
+      "meanTemperature": "210",
+      "distanceAu": 1.524,
+      "moons": 2,
+      "description": "Mars is a cold desert world studied by orbiters and rovers.",
+      "missions": "MRO · MAVEN · Perseverance",
+      "imageryCredit": "NASA/USGS Mars MOLA mosaic",
+      "horizonsId": "499"
+    },
+    "jupiter": {
+      "id": "jupiter",
+      "name": "Jupiter",
+      "fetchedAt": "2026-05-20T18:56:40.657Z",
+      "sources": {
+        "horizons": {
+          "name": "NASA/JPL Horizons System",
+          "url": "https://ssd.jpl.nasa.gov/horizons/"
+        },
+        "science": {
+          "name": "NASA Science",
+          "url": "https://science.nasa.gov/jupiter/facts/"
+        },
+        "imagery": {
+          "name": "NASA/JPL-Caltech/SwRI Juno",
+          "url": "https://science.nasa.gov/jupiter/"
+        }
+      },
+      "diameterKm": 139822,
+      "massDescription": "18.9819",
+      "siderealDay": "9h 55m 29.711 s",
+      "orbitalPeriod": "11.861982204 y",
+      "meanTemperature": "165+-5 K",
+      "distanceAu": 5.203,
+      "moons": 95,
+      "description": "Jupiter is the largest planet, a gas giant with banded clouds.",
+      "missions": "Juno · Galileo · Voyager",
+      "imageryCredit": "NASA/JPL-Caltech/SwRI Juno",
+      "horizonsId": "599"
+    },
+    "saturn": {
+      "id": "saturn",
+      "name": "Saturn",
+      "fetchedAt": "2026-05-20T18:56:40.657Z",
+      "sources": {
+        "horizons": {
+          "name": "NASA/JPL Horizons System",
+          "url": "https://ssd.jpl.nasa.gov/horizons/"
+        },
+        "science": {
+          "name": "NASA Science",
+          "url": "https://science.nasa.gov/saturn/facts/"
+        },
+        "imagery": {
+          "name": "NASA/JPL-Caltech/SSI Cassini",
+          "url": "https://science.nasa.gov/saturn/"
+        }
+      },
+      "diameterKm": 116464,
+      "massDescription": "5.6834",
+      "siderealDay": "10h 39m 22.4s",
+      "orbitalPeriod": "29.447498 yr",
+      "meanTemperature": "134+-4 K",
+      "distanceAu": 9.537,
+      "moons": 146,
+      "description": "Saturn is known for its spectacular ring system.",
+      "missions": "Cassini-Huygens · Voyager",
+      "imageryCredit": "NASA/JPL-Caltech/SSI Cassini",
+      "horizonsId": "699"
+    },
+    "uranus": {
+      "id": "uranus",
+      "name": "Uranus",
+      "fetchedAt": "2026-05-20T18:56:40.657Z",
+      "sources": {
+        "horizons": {
+          "name": "NASA/JPL Horizons System",
+          "url": "https://ssd.jpl.nasa.gov/horizons/"
+        },
+        "science": {
+          "name": "NASA Science",
+          "url": "https://science.nasa.gov/uranus/facts/"
+        },
+        "imagery": {
+          "name": "NASA/JPL Voyager 2",
+          "url": "https://science.nasa.gov/uranus/"
+        }
+      },
+      "diameterKm": 50724,
+      "massDescription": "86.813",
+      "siderealDay": "17.24+-0.01 h",
+      "orbitalPeriod": "84.0120465 y",
+      "meanTemperature": "76+-2 K",
+      "distanceAu": 19.191,
+      "moons": 28,
+      "description": "Uranus is an ice giant with an extreme axial tilt.",
+      "missions": "Voyager 2",
+      "imageryCredit": "NASA/JPL Voyager 2",
+      "horizonsId": "799"
+    },
+    "neptune": {
+      "id": "neptune",
+      "name": "Neptune",
+      "fetchedAt": "2026-05-20T18:56:40.657Z",
+      "sources": {
+        "horizons": {
+          "name": "NASA/JPL Horizons System",
+          "url": "https://ssd.jpl.nasa.gov/horizons/"
+        },
+        "science": {
+          "name": "NASA Science",
+          "url": "https://science.nasa.gov/neptune/facts/"
+        },
+        "imagery": {
+          "name": "NASA/JPL Voyager 2",
+          "url": "https://science.nasa.gov/neptune/"
+        }
+      },
+      "diameterKm": 49248,
+      "massDescription": "102.409",
+      "siderealDay": "16.11+-0.01 hr",
+      "orbitalPeriod": "164.788501027 y Sidereal orbit period",
+      "meanTemperature": "72+-2 K",
+      "distanceAu": 30.069,
+      "moons": 16,
+      "description": "Neptune is the windiest planet with a deep blue atmosphere.",
+      "missions": "Voyager 2",
+      "imageryCredit": "NASA/JPL Voyager 2",
+      "horizonsId": "899"
+    }
+  }
+}

@@ -1,0 +1,106 @@
+# Self-Improvement Protocol
+
+One file. No registers, no IDs, no weekly forms. Use this when something feels off—or before you start the next feature.
+
+---
+
+## The loop (≈15 minutes)
+
+```
+Notice → Change one thing → Check → Keep or drop
+```
+
+| Step | Question | Output |
+|------|----------|--------|
+| **Notice** | What actually bothered me? (UX, accuracy, perf, AI output) | One sentence |
+| **Change** | What is the *smallest* fix or experiment? | One PR-sized change |
+| **Check** | How do I know it helped? | A quick test you can repeat |
+| **Keep or drop** | Did it work? | One line in the log below |
+
+**Rule:** One improvement at a time. Finish the loop before starting the next.
+
+---
+
+## When to run
+
+- **Trigger:** Bug, awkward UX, wrong AI behavior, or “this feels frozen/wrong”
+- **Before coding:** Read “Hard rules” + last 2 log entries (2 min)
+- **After coding:** If you changed behavior, add a log line (1 min)
+
+No scheduled reviews unless *you* want them. This protocol is event-driven, not calendar-driven.
+
+---
+
+## Hard rules (this project)
+
+These came from real failures—don’t relitigate without a strong reason.
+
+1. **Simulation owns truth** — Planet/object positions from JPL Horizons, Keplerian elements, ISS TLE. Not Grok.
+2. **Imagine owns effects only** — Star streaks, dust, motion blur during transit/lightspeed. Never planets, moons, or fixed silhouettes on screen. **Exception:** Earth landing cinematics use real satellite imagery + DEM tiles (simulation owns final surface position); cached per map cell in `public/data/landings/`.
+3. **Tours observe, not just fly** — Multi-stop trips should dwell at each body (`tourTiming.ts`), not snap to the next leg.
+4. **Ship small** — Prefer a focused diff over a new framework or doc tree.
+
+---
+
+## Repeatable checks (pick one per loop)
+
+Use the same check every time for that category so you build intuition.
+
+| Category | Quick check |
+|----------|-------------|
+| **Accuracy** | Compare one fact or distance to [Horizons](https://ssd.jpl.nasa.gov/horizons/app.html) or NASA Fact Sheet |
+| **Flight / tour** | Run one tour preset end-to-end; note cruise vs observe time |
+| **Imagine** | Idle view: no overlay. Autopilot transit: subtle effects only, no body shapes |
+| **Perf** | Fly near Jupiter; no sustained frame stutter in devtools |
+| **AI guide** | Ask something with a known answer; verify it doesn’t invent live positions |
+
+---
+
+## Asking AI for help (Cursor / Grok)
+
+Paste this shape—it beats ISO templates:
+
+```
+Self-improvement loop for PlanetsOOO:
+
+Notice: [one sentence]
+Hard rules: simulation owns truth; Imagine effect-only; tours dwell.
+
+Suggest ONE small change (file + approach). No new process docs.
+How should I verify it worked?
+```
+
+For debugging:
+
+```
+Notice: [symptom]
+Already tried: [if anything]
+Repro: [steps]
+
+Root cause + smallest fix. Respect IMPROVE.md hard rules.
+```
+
+---
+
+## Session log
+
+Keep the last ~10 entries. Delete rows that no longer teach you anything.
+
+| Date | Noticed | Changed | Result (keep/drop) |
+|------|---------|---------|-------------------|
+| 2026-05-22 | Imagine showed fixed planet silhouettes | Effect-only prompts; overlay only in transit | **Keep** |
+| 2026-05-22 | Route planner skipped observation | Tour dwell + scenic cruise | **Keep** |
+| 2026-05-22 | Asteroid field inaccurate at scale | Removed field | **Keep** |
+| 2026-05-22 | Heavy governance docs unused | Removed; this file instead | **Keep** |
+| | | | |
+
+---
+
+## What we deliberately *don’t* do
+
+- Issue registers, CAPA forms, or sprint ceremonies unless a problem repeats 3+ times
+- Accuracy “scores” without a specific comparison
+- Grok-generated ephemeris or planet art
+- Production build heroics when `npm run dev` + `tsc` are enough for the current slice
+
+If something keeps breaking after three loops, *then* consider a dedicated issue in GitHub—not before.
