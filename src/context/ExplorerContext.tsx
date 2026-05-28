@@ -13,6 +13,7 @@ import {
 import type { PlanetId } from "@/data/planets";
 import { isPlanetTarget, type NavTargetId } from "@/data/navigationTargets";
 import { markIdleOrbitUserActivity } from "@/lib/idleOrbitState";
+import { resetMobileTouchState } from "@/lib/mobileTouchState";
 import {
   beginDiscoveryOrbitAtTarget,
   beginSearchFocusAtTarget,
@@ -226,6 +227,7 @@ export function ExplorerProvider({ children }: { children: ReactNode }) {
 
   const exitNavigation = useCallback(() => {
     setNavigationActiveWrapped(false);
+    resetMobileTouchState();
     if (document.pointerLockElement) {
       document.exitPointerLock();
     }

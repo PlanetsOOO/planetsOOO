@@ -25,6 +25,7 @@ import {
 } from "@/lib/idleOrbitState";
 import { discoveryAutopilotState } from "@/lib/discoveryAutopilot";
 import { inputKeys } from "@/lib/inputState";
+import { isMobileFlightActive, mobileTouchState } from "@/lib/mobileTouchState";
 import {
   applyCameraAngles,
   cameraAnglesFromPosition,
@@ -55,6 +56,16 @@ function copyFrame(from: OrbitFrame, to: OrbitFrame) {
 }
 
 function hasFlightInput(): boolean {
+  if (isMobileFlightActive()) return true;
+  if (
+    mobileTouchState.enabled &&
+    (mobileTouchState.thrustX !== 0 ||
+      mobileTouchState.thrustY !== 0 ||
+      mobileTouchState.braking ||
+      mobileTouchState.speedTier > 0)
+  ) {
+    return true;
+  }
   for (const key of FLIGHT_KEYS) {
     if (inputKeys.has(key)) return true;
   }

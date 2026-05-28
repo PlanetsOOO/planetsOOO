@@ -17,6 +17,11 @@ import {
 import type { FlightState } from "@/hooks/useFlightState";
 import { clearInputKeys, inputKeys } from "@/lib/inputState";
 import {
+  isMobileFlightActive,
+  mobileTouchState,
+  MOBILE_LOOK_SENSITIVITY,
+} from "@/lib/mobileTouchState";
+import {
   BASE_FOV,
   LIGHTSPEED_ACCEL,
   LIGHTSPEED_MAX,
@@ -39,6 +44,10 @@ import { lightspeedState, resetLightspeedState } from "@/lib/warpState";
 
 const MOUSE_SENSITIVITY = 0.0022;
 const PITCH_LIMIT = Math.PI / 2 - 0.12;
+
+function requestPointerLockIfSupported(el: HTMLElement): void {
+  el.requestPointerLock?.();
+}
 
 function isScenicAutopilotZoomKey(
   key: string,
@@ -213,14 +222,16 @@ export function FlightControls({
     };
 
     const onClick = () => {
+      if (mobileTouchState.enabled) return;
       const routeTrip = routeActiveRef.current && autoNavigatingRef.current;
       if (autoNavigatingRef.current && !routeTrip) return;
       if (document.pointerLockElement === el) return;
       setNavigationActive(true);
-      void el.requestPointerLock();
+      requestPointerLockIfSupported(el);
     };
 
     const onPointerLockChange = () => {
+      if (mobileTouchState.enabled) return;
       const locked = document.pointerLockElement === el;
       setNavigationActive(locked);
       if (!locked) {
@@ -333,6 +344,17 @@ export function FlightControls({
     }
 
     const dt = Math.min(delta, 0.05);
+    const mobileFlight = isMobileFlightActive();
+
+    if (
+      mobileFlight &&
+      (mobileTouchState.thrustX !== 0 ||
+        mobileTouchState.thrustY !== 0 ||
+        mobileTouchState.braking ||
+        mobileTouchState.speedTier > 0)
+    ) {
+      markIdleOrbitUserActivity();
+    }
 
     if (idleOrbitState.active) {
       velocity.current.set(0, 0, 0);
@@ -347,11 +369,47 @@ export function FlightControls({
     const el = gl.domElement;
     const pointerLocked = document.pointerLockElement === el;
 
+    if (mobileFlight) {
+      const ldx = mobileTouchState.lookDx;
+      const ldy = mobileTouchState.lookDy;
+      if (ldx !== 0 || ldy !== 0) {
+        yawRef.current -= ldx * MOBILE_LOOK_SENSITIVITY;
+        pitchRef.current -= ldy * MOBILE_LOOK_SENSITIVITY;
+        pitchRef.current = THREE.MathUtils.clamp(
+          pitchRef.current,
+          -PITCH_LIMIT,
+          PITCH_LIMIT,
+        );
+        mobileTouchState.lookDx = 0;
+        mobileTouchState.lookDy = 0;
+        markFlightReticleActivity();
+      }
+    }
+
     directionFromAngles(yawRef.current, pitchRef.current, forward.current);
     right.current.crossVectors(forward.current, up.current).normalize();
 
     const k = pointerLocked ? keys.current : new Set<string>();
-    const inFlightMode = pointerLocked && navigationActiveRef.current;
+    if (mobileFlight) {
+      if (mobileTouchState.braking) {
+        k.add(" ");
+      } else if (mobileTouchState.speedTier >= 2) {
+        k.add("shift");
+        k.add("w");
+        k.add("f");
+      } else if (mobileTouchState.speedTier >= 1) {
+        k.add("shift");
+        k.add("w");
+      } else {
+        if (mobileTouchState.thrustY > 0) k.add("w");
+        if (mobileTouchState.thrustY < 0) k.add("s");
+        if (mobileTouchState.thrustX > 0) k.add("d");
+        if (mobileTouchState.thrustX < 0) k.add("a");
+      }
+    }
+
+    const inFlightMode =
+      (pointerLocked && navigationActiveRef.current) || mobileFlight;
     const braking = k.has(" ");
     const lightspeedForward =
       inFlightMode && !braking && k.has("shift") && k.has("w") && !k.has("s");
@@ -496,7 +554,7 @@ export function FlightControls({
       (warpEngaged ||
         (braking && vel.lengthSq() > STOP_THRESHOLD * STOP_THRESHOLD) ||
         inputDir.current.lengthSq() > 0) &&
-      pointerLocked;
+      (pointerLocked || mobileFlight);
     const targetThrottle = warpEngaged
       ? 0.5 + intensity * 0.5
       : thrusting

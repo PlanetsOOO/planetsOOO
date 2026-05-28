@@ -45,3 +45,11 @@ input[type="range"]::-webkit-slider-thumb {
   background: #38bdf8;
   cursor: pointer;
 }
+
+@media (orientation: landscape) and (pointer: coarse) {
+  html,
+  body {
+    overscroll-behavior: none;
+    touch-action: manipulation;
+  }
+}

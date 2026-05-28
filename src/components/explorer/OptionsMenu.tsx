@@ -52,14 +52,16 @@ export function OptionsMenu() {
   return (
     <div
       ref={panelRef}
+      data-explorer-menu
       className={`fixed top-5 right-5 z-50 transition-opacity duration-700 ${
         hideChrome ? "pointer-events-none opacity-0" : "opacity-100"
       }`}
     >
       <button
         type="button"
+        onPointerDown={(e) => e.stopPropagation()}
         onClick={() => setMenuOpen(!menuOpen)}
-        className="flex flex-col gap-1.5 p-2 rounded-md transition-opacity hover:opacity-70 focus:outline-none focus-visible:ring-1 focus-visible:ring-white/30"
+        className="pointer-events-auto flex flex-col gap-1.5 p-2 rounded-md transition-opacity hover:opacity-70 focus:outline-none focus-visible:ring-1 focus-visible:ring-white/30"
         style={{ opacity: menuOpen ? 0.55 : 0.28 }}
         aria-label="Options"
         aria-expanded={menuOpen}

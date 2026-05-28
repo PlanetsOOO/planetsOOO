@@ -1,9 +1,11 @@
 "use client";
 
-import dynamic from "next/dynamic";
 import { useEffect } from "react";
 import { ExplorerProvider, useExplorer } from "@/context/ExplorerContext";
+import { useMobileLandscape } from "@/hooks/useMobileLandscape";
+import SolarSystemCanvas from "@/components/explorer/SolarSystemCanvas";
 import { EarthLandCinematic } from "./EarthLandCinematic";
+import { MobileFlightControls } from "./MobileFlightControls";
 import { OptionsMenu } from "./OptionsMenu";
 import { PlanetPanel } from "./PlanetPanel";
 import { SpeedHud } from "./SpeedHud";
@@ -39,8 +41,21 @@ function GlobalShortcuts() {
 function NavigationHint() {
   const { navigationActive, discoveryAutopilotActive, scenicChromeVisible } =
     useExplorer();
+  const mobileLandscape = useMobileLandscape();
+
   if (navigationActive) return null;
   if (discoveryAutopilotActive && !scenicChromeVisible) return null;
+
+  if (mobileLandscape) {
+    return (
+      <p
+        className="fixed bottom-4 left-1/2 z-30 max-w-[90vw] -translate-x-1/2 text-center text-[9px] tracking-widest uppercase text-zinc-600 pointer-events-none select-none"
+        aria-live="polite"
+      >
+        Left: thrust · drag up to L¹ / L² · Right: steer · Menu to exit
+      </p>
+    );
+  }
 
   return (
     <p
@@ -52,30 +67,18 @@ function NavigationHint() {
   );
 }
 
-const SolarSystemCanvas = dynamic(
-  () => import("@/components/explorer/SolarSystemCanvas"),
-  {
-    ssr: false,
-    loading: () => (
-      <div className="absolute inset-0 flex items-center justify-center bg-[#030508]">
-        <p className="text-xs tracking-[0.3em] uppercase text-zinc-600 animate-pulse">
-          Initializing…
-        </p>
-      </div>
-    ),
-  },
-);
-
 function ExplorerShell() {
   const { navigationActive } = useExplorer();
+  const mobileLandscape = useMobileLandscape();
 
   return (
     <main
       className={`relative h-screen w-full overflow-hidden bg-[#030508] ${
-        navigationActive ? "cursor-none" : "cursor-default"
+        navigationActive && !mobileLandscape ? "cursor-none" : "cursor-default"
       }`}
     >
       <SolarSystemCanvas />
+      <MobileFlightControls />
       <EarthLandCinematic />
       <FlightReticle />
       <UtcClock />
