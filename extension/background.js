@@ -81,21 +81,61 @@ async function requestWindowFullscreen(windowId) {
   return updated.state || "fullscreen";
 }
 
-function scheduleFullscreenRetries(windowId) {
+function clearFullscreenRetry() {
   if (fullscreenRetryTimer != null) {
-    clearInterval(fullscreenRetryTimer);
+    clearTimeout(fullscreenRetryTimer);
     fullscreenRetryTimer = null;
   }
+}
 
-  let attempts = 0;
-  fullscreenRetryTimer = setInterval(() => {
-    attempts += 1;
-    void requestWindowFullscreen(windowId).catch(() => {});
-    if (attempts >= 8) {
-      clearInterval(fullscreenRetryTimer);
-      fullscreenRetryTimer = null;
+function scheduleFullscreenCheck(windowId) {
+  clearFullscreenRetry();
+
+  fullscreenRetryTimer = setTimeout(() => {
+    fullscreenRetryTimer = null;
+    void windowsGet(windowId).then((win) => {
+      if (win?.state === "fullscreen") return;
+      return requestWindowFullscreen(windowId);
+    }).catch(() => {});
+  }, 1800);
+}
+
+async function enterScreensaverFullscreen(windowId) {
+  const state = await requestWindowFullscreen(windowId);
+  if (state !== "fullscreen") {
+    scheduleFullscreenCheck(windowId);
+  }
+  return state;
+}
+
+function clearScreensaverTracking() {
+  screensaverTabId = null;
+  screensaverWindowId = null;
+  clearFullscreenRetry();
+}
+
+async function restoreScreensaverWindowState(windowId) {
+  if (windowId == null) return;
+  try {
+    const win = await windowsGet(windowId);
+    if (!win) return;
+    if (win.state === previousWindowState) return;
+
+    // macOS fullscreen Space transitions visibly if we force this immediately.
+    if (win.state === "fullscreen") {
+      await windowsUpdate(windowId, { state: "normal" });
+      if (previousWindowState === "maximized") {
+        setTimeout(() => {
+          void windowsUpdate(windowId, { state: "maximized" }).catch(() => {});
+        }, 700);
+      }
+      return;
     }
-  }, 500);
+
+    await windowsUpdate(windowId, { state: previousWindowState || "normal" });
+  } catch {
+    // Window may already be closed.
+  }
 }
 
 function buildPlanetsUrl(settings) {
@@ -135,12 +175,10 @@ async function focusExistingScreensaver() {
 
   try {
     await tabsGet(screensaverTabId);
-    await requestWindowFullscreen(screensaverWindowId);
-    scheduleFullscreenRetries(screensaverWindowId);
+    await enterScreensaverFullscreen(screensaverWindowId);
     return true;
   } catch {
-    screensaverTabId = null;
-    screensaverWindowId = null;
+    clearScreensaverTracking();
     return false;
   }
 }
@@ -174,8 +212,7 @@ async function openScreensaver({ preview = false } = {}) {
       });
       screensaverTabId = tab.id ?? null;
 
-      const state = await requestWindowFullscreen(targetWindow.id);
-      scheduleFullscreenRetries(targetWindow.id);
+      const state = await enterScreensaverFullscreen(targetWindow.id);
       const updated = await windowsGet(targetWindow.id);
 
       const result = {
@@ -202,7 +239,7 @@ async function openScreensaver({ preview = false } = {}) {
     screensaverTabId = win.tabs?.[0]?.id ?? null;
     previousWindowState = "normal";
     if (screensaverWindowId != null) {
-      scheduleFullscreenRetries(screensaverWindowId);
+      scheduleFullscreenCheck(screensaverWindowId);
     }
 
     const result = {
@@ -217,8 +254,7 @@ async function openScreensaver({ preview = false } = {}) {
     await saveDebug(result);
     return result;
   } catch (err) {
-    screensaverTabId = null;
-    screensaverWindowId = null;
+    clearScreensaverTracking();
     const result = {
       ok: false,
       url,
@@ -233,12 +269,7 @@ async function closeScreensaver(fallback = {}) {
   const tabId = screensaverTabId ?? fallback.tabId ?? null;
   const windowId = screensaverWindowId ?? fallback.windowId ?? null;
 
-  screensaverTabId = null;
-  screensaverWindowId = null;
-  if (fullscreenRetryTimer != null) {
-    clearInterval(fullscreenRetryTimer);
-    fullscreenRetryTimer = null;
-  }
+  clearScreensaverTracking();
 
   if (tabId != null) {
     try {
@@ -251,9 +282,7 @@ async function closeScreensaver(fallback = {}) {
   if (windowId != null) {
     try {
       const settings = await getSettings();
-      if (settings.restoreWindowState) {
-        await windowsUpdate(windowId, { state: previousWindowState || "normal" });
-      }
+      if (settings.restoreWindowState) await restoreScreensaverWindowState(windowId);
     } catch {
       // Window may already be closed.
     }
@@ -277,12 +306,7 @@ chrome.idle.onStateChanged.addListener((state) => {
 
 chrome.tabs.onRemoved.addListener((tabId) => {
   if (tabId === screensaverTabId) {
-    screensaverTabId = null;
-    screensaverWindowId = null;
-    if (fullscreenRetryTimer != null) {
-      clearInterval(fullscreenRetryTimer);
-      fullscreenRetryTimer = null;
-    }
+    clearScreensaverTracking();
   }
 });
 
@@ -290,18 +314,12 @@ chrome.tabs.onUpdated.addListener((tabId, changeInfo) => {
   if (tabId !== screensaverTabId) return;
   if (changeInfo.status !== "complete") return;
   if (screensaverWindowId == null) return;
-  void requestWindowFullscreen(screensaverWindowId).catch(() => {});
-  scheduleFullscreenRetries(screensaverWindowId);
+  scheduleFullscreenCheck(screensaverWindowId);
 });
 
 chrome.windows.onRemoved.addListener((windowId) => {
   if (windowId === screensaverWindowId) {
-    screensaverTabId = null;
-    screensaverWindowId = null;
-    if (fullscreenRetryTimer != null) {
-      clearInterval(fullscreenRetryTimer);
-      fullscreenRetryTimer = null;
-    }
+    clearScreensaverTracking();
   }
 });
 

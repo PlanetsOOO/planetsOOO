@@ -30,8 +30,13 @@ html.screensaver-mode body {
   height: 100%;
   margin: 0;
   padding: 0;
+  cursor: none;
   overflow: hidden;
   background: #030508;
+}
+
+html.screensaver-mode * {
+  cursor: none !important;
 }
 
 html.screensaver-mode body > main {
