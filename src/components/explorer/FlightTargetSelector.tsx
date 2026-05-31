@@ -41,9 +41,11 @@ interface Hit {
 export function FlightTargetSelector({
   yawRef,
   pitchRef,
+  rollRef,
 }: {
   yawRef: React.MutableRefObject<number>;
   pitchRef: React.MutableRefObject<number>;
+  rollRef: React.MutableRefObject<number>;
 }) {
   const { navigationActive, autoNavigating } = useExplorer();
 
@@ -53,7 +55,12 @@ export function FlightTargetSelector({
       return;
     }
 
-    directionFromAngles(yawRef.current, pitchRef.current, rayDir);
+    directionFromAngles(
+      yawRef.current,
+      pitchRef.current,
+      rayDir,
+      rollRef.current,
+    );
     rayOrigin.set(0, 0, 0);
 
     const hits: Hit[] = [];

@@ -96,12 +96,14 @@ interface NavigationControllerProps {
   flightRef: React.MutableRefObject<FlightState>;
   yawRef: React.MutableRefObject<number>;
   pitchRef: React.MutableRefObject<number>;
+  rollRef: React.MutableRefObject<number>;
 }
 
 export function NavigationController({
   flightRef,
   yawRef,
   pitchRef,
+  rollRef,
 }: NavigationControllerProps) {
   const { camera } = useThree();
   const {
@@ -332,7 +334,12 @@ export function NavigationController({
       setLightspeedActive(warpVisual);
       setDisplaySpeedKmPerSec(flightRef.current.speedKmPerSec);
 
-      applyCameraAngles(camera, yawRef.current, pitchRef.current);
+      applyCameraAngles(
+        camera,
+        yawRef.current,
+        pitchRef.current,
+        rollRef.current,
+      );
 
       const cam = camera as THREE.PerspectiveCamera;
       if ("fov" in cam) {
@@ -491,7 +498,12 @@ export function NavigationController({
       );
     }
 
-    applyCameraAngles(camera, yawRef.current, pitchRef.current);
+    applyCameraAngles(
+      camera,
+      yawRef.current,
+      pitchRef.current,
+      rollRef.current,
+    );
 
     const cam = camera as THREE.PerspectiveCamera;
     if ("fov" in cam) {

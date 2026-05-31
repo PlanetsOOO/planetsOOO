@@ -1,0 +1,110 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Orbit Screensaver Options</title>
+    <link rel="stylesheet" href="options.css" />
+  </head>
+  <body>
+    <main>
+      <h1>Orbit Screensaver</h1>
+      <p class="lede">
+        When Chrome reports the computer is idle, Orbit opens an extension-owned
+        screensaver tab in the current window and requests Chrome window
+        fullscreen via <code>chrome.windows.update</code>.
+      </p>
+
+      <form id="form">
+        <label class="row">
+          <input type="checkbox" id="enabled" name="enabled" />
+          <span>Enable idle screensaver</span>
+        </label>
+
+        <label class="field">
+          <span>Screensaver source</span>
+          <select id="source" name="source">
+            <option value="planets">PlanetsOOO scenic tour</option>
+            <option value="builtin">Built-in animation test</option>
+          </select>
+          <small>
+            Use the built-in animation to test extension fullscreen. Use
+            PlanetsOOO for the real scenic tour.
+          </small>
+        </label>
+
+        <label class="field" id="siteUrlField">
+          <span>PlanetsOOO URL</span>
+          <input
+            type="url"
+            id="siteUrl"
+            name="siteUrl"
+            spellcheck="false"
+            required
+          />
+          <small>
+            Production: <code>https://www.planets.ooo/</code>. Local:
+            <code>http://localhost:3000/</code>.
+          </small>
+        </label>
+
+        <label class="field">
+          <span>Idle timeout</span>
+          <div class="inline">
+            <input
+              type="range"
+              id="idleMinutes"
+              name="idleMinutes"
+              min="0.25"
+              max="60"
+              step="0.25"
+            />
+            <output id="idleMinutesLabel">5 min</output>
+          </div>
+          <small>Chrome idle detection has a practical minimum of 15 seconds.</small>
+        </label>
+
+        <label class="field">
+          <span>Enter PlanetsOOO flight mode</span>
+          <select id="flightKey" name="flightKey">
+            <option value="Backquote">` (backtick)</option>
+            <option value="Semicolon">; (semicolon)</option>
+            <option value="BracketLeft">[ (left bracket)</option>
+            <option value="Backslash">\ (backslash)</option>
+            <option value="F12">F12</option>
+          </select>
+          <small>
+            Passed to PlanetsOOO as <code>flightKey</code>. Leave close-on-active
+            off if you want this key to enter flight instead of closing.
+          </small>
+        </label>
+
+        <label class="field">
+          <span>Exit PlanetsOOO screensaver</span>
+          <select id="exitGesture" name="exitGesture">
+            <option value="contextmenu">Right-click</option>
+            <option value="middleclick">Middle-click</option>
+          </select>
+          <small>Passed to PlanetsOOO as <code>exit</code>.</small>
+        </label>
+
+        <label class="row">
+          <input type="checkbox" id="closeOnActive" name="closeOnActive" />
+          <span>Close screensaver when computer becomes active</span>
+        </label>
+
+        <label class="row">
+          <input type="checkbox" id="restoreWindowState" name="restoreWindowState" />
+          <span>Restore previous window state on close</span>
+        </label>
+
+        <div class="actions">
+          <button type="submit">Save</button>
+          <button type="button" id="preview" class="secondary">Preview now</button>
+        </div>
+      </form>
+
+      <p id="status" class="status" role="status"></p>
+    </main>
+    <script src="options.js"></script>
+  </body>
+</html>

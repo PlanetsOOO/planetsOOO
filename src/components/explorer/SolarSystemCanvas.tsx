@@ -1,12 +1,14 @@
 "use client";
 
 import { Canvas } from "@react-three/fiber";
-import { Suspense, useEffect, useState } from "react";
+import { Suspense, useEffect, useLayoutEffect, useState } from "react";
 import * as THREE from "three";
 import { useExplorer } from "@/context/ExplorerContext";
 import { useCoarsePointer } from "@/hooks/useCoarsePointer";
 import { getRenderClipPlanes } from "@/lib/coordinates/frame";
 import { TextureWarmup } from "@/lib/preloadTextures";
+import { isScreensaverMode } from "@/lib/screensaverConfig";
+import { activateScreensaverScenicTour } from "@/lib/screensaverScenic";
 import { hasWebGLSupport } from "@/lib/webglSupport";
 import { SolarSystemScene } from "./SolarSystemScene";
 
@@ -30,9 +32,14 @@ function WebGLFallback() {
 export default function SolarSystemCanvas() {
   const { dismissInfo } = useExplorer();
   const isMobile = useCoarsePointer();
-  const [clientReady, setClientReady] = useState(false);
+  const screensaver = isScreensaverMode();
+  const [clientReady, setClientReady] = useState(screensaver);
   const [webglOk, setWebglOk] = useState(true);
   const [canvasError, setCanvasError] = useState(false);
+
+  useLayoutEffect(() => {
+    if (screensaver) activateScreensaverScenicTour();
+  }, [screensaver]);
 
   useEffect(() => {
     setWebglOk(hasWebGLSupport());
@@ -91,7 +98,13 @@ export default function SolarSystemCanvas() {
         }}
         onPointerMissed={() => dismissInfo()}
       >
-        <Suspense fallback={null}>
+        <Suspense
+          fallback={
+            <mesh visible={false}>
+              <boxGeometry args={[0.001, 0.001, 0.001]} />
+            </mesh>
+          }
+        >
           <TextureWarmup />
           <SolarSystemScene />
         </Suspense>

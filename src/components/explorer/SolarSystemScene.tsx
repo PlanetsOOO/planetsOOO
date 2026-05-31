@@ -18,7 +18,6 @@ import { MoonMesh } from "./MoonMesh";
 import { MoonOrbitRing } from "./MoonOrbitRing";
 import { IdleOrbitController } from "./IdleOrbitController";
 import { DiscoveryAutopilotController } from "./DiscoveryAutopilotController";
-import { EarthLandCinematicBridge } from "./EarthLandCinematicBridge";
 import { EarthApproachController } from "./EarthApproachController";
 import { FlightTargetSelector } from "./FlightTargetSelector";
 import { initialSpawnAngles } from "@/lib/viewerState";
@@ -28,6 +27,7 @@ export function SolarSystemScene() {
   const flightRef = useFlightStateRef();
   const yawRef = useRef(initialSpawnAngles.yaw);
   const pitchRef = useRef(initialSpawnAngles.pitch);
+  const rollRef = useRef(0);
 
   const bodies = useMemo(() => PLANETS.filter((p) => p.id !== "sun"), []);
 
@@ -63,16 +63,29 @@ export function SolarSystemScene() {
         flightRef={flightRef}
         yawRef={yawRef}
         pitchRef={pitchRef}
+        rollRef={rollRef}
       />
-      <IdleOrbitController yawRef={yawRef} pitchRef={pitchRef} />
-      <DiscoveryAutopilotController yawRef={yawRef} pitchRef={pitchRef} />
-      <EarthLandCinematicBridge yawRef={yawRef} pitchRef={pitchRef} />
-      <EarthApproachController yawRef={yawRef} pitchRef={pitchRef} />
-      <FlightTargetSelector yawRef={yawRef} pitchRef={pitchRef} />
+      <IdleOrbitController yawRef={yawRef} pitchRef={pitchRef} rollRef={rollRef} />
+      <DiscoveryAutopilotController
+        yawRef={yawRef}
+        pitchRef={pitchRef}
+        rollRef={rollRef}
+      />
+      <EarthApproachController
+        yawRef={yawRef}
+        pitchRef={pitchRef}
+        rollRef={rollRef}
+      />
+      <FlightTargetSelector
+        yawRef={yawRef}
+        pitchRef={pitchRef}
+        rollRef={rollRef}
+      />
       <NavigationController
         flightRef={flightRef}
         yawRef={yawRef}
         pitchRef={pitchRef}
+        rollRef={rollRef}
       />
       <ThrustEffect flightRef={flightRef} />
     </>

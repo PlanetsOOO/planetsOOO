@@ -1,0 +1,198 @@
+:root {
+  color-scheme: dark;
+  background: #02040a;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  overflow: hidden;
+  background: #02040a;
+  font-family:
+    ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono",
+    monospace;
+}
+
+.space {
+  position: fixed;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  background:
+    radial-gradient(circle at 70% 22%, rgba(96, 165, 250, 0.14), transparent 28%),
+    radial-gradient(circle at 24% 74%, rgba(168, 85, 247, 0.12), transparent 30%),
+    linear-gradient(145deg, #02040a 0%, #050816 48%, #010208 100%);
+}
+
+.stars,
+.stars::before,
+.stars::after {
+  position: absolute;
+  inset: -20%;
+  content: "";
+  background-image:
+    radial-gradient(circle, rgba(255, 255, 255, 0.8) 0 1px, transparent 1.5px),
+    radial-gradient(circle, rgba(147, 197, 253, 0.6) 0 1px, transparent 1.4px);
+  background-size:
+    83px 89px,
+    149px 137px;
+  background-position:
+    0 0,
+    37px 61px;
+  opacity: 0.42;
+  transform-origin: center;
+}
+
+.stars-a {
+  animation: drift 90s linear infinite;
+}
+
+.stars-b {
+  opacity: 0.24;
+  filter: blur(0.5px);
+  transform: scale(1.7);
+  animation: drift 150s linear infinite reverse;
+}
+
+.nebula {
+  position: absolute;
+  width: 76vmin;
+  height: 76vmin;
+  border-radius: 999px;
+  background:
+    radial-gradient(circle, rgba(14, 165, 233, 0.2), transparent 58%),
+    radial-gradient(circle at 35% 65%, rgba(217, 70, 239, 0.16), transparent 42%);
+  filter: blur(22px);
+  animation: breathe 12s ease-in-out infinite;
+}
+
+.system {
+  position: relative;
+  width: min(68vw, 68vh);
+  height: min(68vw, 68vh);
+  opacity: 0.92;
+}
+
+.sun {
+  position: absolute;
+  inset: 50%;
+  width: 8vmin;
+  height: 8vmin;
+  border-radius: 999px;
+  background:
+    radial-gradient(circle at 34% 30%, #fff, #fde68a 32%, #f97316 72%);
+  box-shadow:
+    0 0 46px rgba(251, 191, 36, 0.42),
+    0 0 130px rgba(249, 115, 22, 0.22);
+  transform: translate(-50%, -50%);
+}
+
+.orbit {
+  position: absolute;
+  inset: 50%;
+  border: 1px solid rgba(148, 163, 184, 0.12);
+  border-radius: 999px;
+  transform: translate(-50%, -50%);
+}
+
+.orbit-a {
+  width: 32%;
+  height: 32%;
+  animation: spin 10s linear infinite;
+}
+
+.orbit-b {
+  width: 58%;
+  height: 58%;
+  animation: spin 18s linear infinite reverse;
+}
+
+.orbit-c {
+  width: 88%;
+  height: 88%;
+  animation: spin 31s linear infinite;
+}
+
+.planet {
+  position: absolute;
+  top: 50%;
+  right: -0.45rem;
+  width: 1rem;
+  height: 1rem;
+  border-radius: 999px;
+  transform: translateY(-50%);
+}
+
+.planet-a {
+  background: radial-gradient(circle at 35% 28%, #fff, #93c5fd 42%, #1d4ed8);
+  box-shadow: 0 0 24px rgba(96, 165, 250, 0.36);
+}
+
+.planet-b {
+  width: 1.35rem;
+  height: 1.35rem;
+  background: radial-gradient(circle at 35% 28%, #fff7ed, #fdba74 42%, #7c2d12);
+  box-shadow: 0 0 24px rgba(251, 146, 60, 0.26);
+}
+
+.planet-c {
+  width: 1.8rem;
+  height: 1.8rem;
+  background: radial-gradient(circle at 35% 28%, #f8fafc, #c4b5fd 42%, #4338ca);
+  box-shadow: 0 0 28px rgba(129, 140, 248, 0.32);
+}
+
+.caption,
+.hint {
+  position: fixed;
+  left: 50%;
+  z-index: 10;
+  margin: 0;
+  color: rgba(148, 163, 184, 0.42);
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  transform: translateX(-50%);
+  user-select: none;
+}
+
+.caption {
+  bottom: 2.5rem;
+  font-size: 0.7rem;
+}
+
+.hint {
+  bottom: 1.1rem;
+  font-size: 0.55rem;
+  opacity: 0.75;
+}
+
+@keyframes spin {
+  to {
+    transform: translate(-50%, -50%) rotate(360deg);
+  }
+}
+
+@keyframes drift {
+  to {
+    transform: translate3d(-8%, 6%, 0) rotate(3deg);
+  }
+}
+
+@keyframes breathe {
+  0%,
+  100% {
+    transform: scale(0.96);
+    opacity: 0.78;
+  }
+  50% {
+    transform: scale(1.08);
+    opacity: 1;
+  }
+}

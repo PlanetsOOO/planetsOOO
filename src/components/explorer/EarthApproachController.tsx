@@ -23,6 +23,7 @@ import { viewerPosition } from "@/lib/viewerState";
 interface EarthApproachControllerProps {
   yawRef: React.MutableRefObject<number>;
   pitchRef: React.MutableRefObject<number>;
+  rollRef: React.MutableRefObject<number>;
 }
 
 const toCenter = new THREE.Vector3();
@@ -36,6 +37,7 @@ const worldUp = new THREE.Vector3(0, 1, 0);
 export function EarthApproachController({
   yawRef,
   pitchRef,
+  rollRef,
 }: EarthApproachControllerProps) {
   const { camera } = useThree();
   const {
@@ -54,12 +56,22 @@ export function EarthApproachController({
     if (earthApproachState.phase === "landed") {
       setDisplaySpeedKmPerSec(0);
       setDisplayLightspeedMultiple(0);
-      applyCameraAngles(camera, yawRef.current, pitchRef.current);
+      applyCameraAngles(
+        camera,
+        yawRef.current,
+        pitchRef.current,
+        rollRef.current,
+      );
       return;
     }
 
     if (earthApproachState.phase === "cinematic") {
-      applyCameraAngles(camera, yawRef.current, pitchRef.current);
+      applyCameraAngles(
+        camera,
+        yawRef.current,
+        pitchRef.current,
+        rollRef.current,
+      );
       return;
     }
 
@@ -82,7 +94,12 @@ export function EarthApproachController({
         endAutopilotTransit();
         landedRef.current = true;
       }
-      applyCameraAngles(camera, yawRef.current, pitchRef.current);
+      applyCameraAngles(
+        camera,
+        yawRef.current,
+        pitchRef.current,
+        rollRef.current,
+      );
       return;
     }
 
@@ -127,7 +144,12 @@ export function EarthApproachController({
       );
     }
 
-    applyCameraAngles(camera, yawRef.current, pitchRef.current);
+    applyCameraAngles(
+      camera,
+      yawRef.current,
+      pitchRef.current,
+      rollRef.current,
+    );
   });
 
   return null;

@@ -24,6 +24,24 @@ body {
   box-sizing: border-box;
 }
 
+html.screensaver-mode,
+html.screensaver-mode body {
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  background: #030508;
+}
+
+html.screensaver-mode body > main {
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100vh;
+  height: 100dvh;
+}
+
 input[type="range"] {
   -webkit-appearance: none;
   appearance: none;

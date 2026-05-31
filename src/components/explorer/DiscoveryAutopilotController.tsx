@@ -52,6 +52,7 @@ import { viewerPosition } from "@/lib/viewerState";
 interface DiscoveryAutopilotControllerProps {
   yawRef: React.MutableRefObject<number>;
   pitchRef: React.MutableRefObject<number>;
+  rollRef: React.MutableRefObject<number>;
 }
 
 const planetWorkFrame: OrbitFrame = {
@@ -88,6 +89,7 @@ function applyOrbitLookAt(
   lookPos: THREE.Vector3,
   yawRef: React.MutableRefObject<number>,
   pitchRef: React.MutableRefObject<number>,
+  rollRef: React.MutableRefObject<number>,
   camera: THREE.Camera,
   dt: number,
   blendRate: number,
@@ -129,12 +131,18 @@ function applyOrbitLookAt(
     pitchRef.current += clampedDpitch * blend;
   }
 
-  applyCameraAngles(camera, yawRef.current, pitchRef.current);
+  applyCameraAngles(
+    camera,
+    yawRef.current,
+    pitchRef.current,
+    rollRef.current,
+  );
 }
 
 export function DiscoveryAutopilotController({
   yawRef,
   pitchRef,
+  rollRef,
 }: DiscoveryAutopilotControllerProps) {
   const {
     discoveryAutopilotActive,
@@ -166,6 +174,7 @@ export function DiscoveryAutopilotController({
         currentPos ?? viewerPosition,
         yawRef,
         pitchRef,
+        rollRef,
         camera,
         dt,
         routeCameraBlendRate(),
@@ -183,7 +192,7 @@ export function DiscoveryAutopilotController({
       return;
     }
 
-    if (!activeRef.current) return;
+    if (!discoveryAutopilotState.active) return;
 
     if (earthApproachState.active) return;
 
@@ -226,6 +235,7 @@ export function DiscoveryAutopilotController({
           lookBlendPos,
           yawRef,
           pitchRef,
+          rollRef,
           camera,
           dt,
           discoveryDepartCameraBlendRate(focusBlend),
@@ -238,6 +248,7 @@ export function DiscoveryAutopilotController({
           currentPos,
           yawRef,
           pitchRef,
+          rollRef,
           camera,
           dt,
           discoveryCameraBlendRate(),
@@ -297,6 +308,7 @@ export function DiscoveryAutopilotController({
           lookBlendPos,
           yawRef,
           pitchRef,
+          rollRef,
           camera,
           dt,
           discoveryOrbitCameraBlendRate(lookBlend),
@@ -315,6 +327,7 @@ export function DiscoveryAutopilotController({
           currentPos ?? viewerPosition,
           yawRef,
           pitchRef,
+          rollRef,
           camera,
           dt,
           discoveryCameraBlendRate(),

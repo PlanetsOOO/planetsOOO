@@ -34,7 +34,9 @@ import {
 } from "@/lib/lightspeed";
 import {
   applyCameraAngles,
+  CAMERA_ROLL_SPEED,
   directionFromAngles,
+  rightFromAngles,
 } from "@/lib/navigation";
 import { markIdleOrbitUserActivity, idleOrbitState } from "@/lib/idleOrbitState";
 import { discoveryAutopilotState, markDiscoveryPovActivity } from "@/lib/discoveryAutopilot";
@@ -64,6 +66,7 @@ interface FlightControlsProps {
   flightRef: React.MutableRefObject<FlightState>;
   yawRef: React.MutableRefObject<number>;
   pitchRef: React.MutableRefObject<number>;
+  rollRef: React.MutableRefObject<number>;
 }
 
 function syncKey(set: Set<string>, key: string, down: boolean) {
@@ -75,6 +78,7 @@ export function FlightControls({
   flightRef,
   yawRef,
   pitchRef,
+  rollRef,
 }: FlightControlsProps) {
   const { gl } = useThree();
   const {
@@ -168,7 +172,29 @@ export function FlightControls({
         return;
       }
 
-      if (document.pointerLockElement !== el && !routeTrip) return;
+      const rollKey = key === "arrowleft" || key === "arrowright";
+      const pointerLocked = document.pointerLockElement === el;
+      const canRoll =
+        discoveryActiveRef.current ||
+        (pointerLocked && navigationActiveRef.current);
+      if (rollKey && canRoll) {
+        if (discoveryActiveRef.current) {
+          // Roll banks the view only — do not mark POV override or focus drifts off-target.
+          markScenicChromeActivity();
+        } else {
+          markFlightReticleActivity();
+        }
+        trackKey(key, true);
+        e.preventDefault();
+        return;
+      }
+
+      if (mobileTouchState.enabled) {
+        trackKey(key, true);
+        return;
+      }
+
+      if (!pointerLocked && !routeTrip) return;
 
       if (
         document.pointerLockElement === el &&
@@ -310,10 +336,27 @@ export function FlightControls({
     markFlightReticleActivity,
     yawRef,
     pitchRef,
+    rollRef,
     flightRef,
   ]);
 
   useFrame((state, delta) => {
+    const dt = Math.min(delta, 0.05);
+    const el = gl.domElement;
+    const pointerLocked = document.pointerLockElement === el;
+    const canRoll =
+      discoveryAutopilotActive ||
+      (pointerLocked && navigationActiveRef.current);
+
+    if (canRoll) {
+      if (keys.current.has("arrowleft")) {
+        rollRef.current += CAMERA_ROLL_SPEED * dt;
+      }
+      if (keys.current.has("arrowright")) {
+        rollRef.current -= CAMERA_ROLL_SPEED * dt;
+      }
+    }
+
     const routeTrip = routeActive && autoNavigating;
     const discoveryPhase = discoveryAutopilotState.phase;
     const discoveryHandoff =
@@ -326,7 +369,12 @@ export function FlightControls({
       flightRef.current.velocity.set(0, 0, 0);
       flightRef.current.speed = 0;
       flightRef.current.speedKmPerSec = 0;
-      applyCameraAngles(state.camera, yawRef.current, pitchRef.current);
+      applyCameraAngles(
+        state.camera,
+        yawRef.current,
+        pitchRef.current,
+        rollRef.current,
+      );
       return;
     }
 
@@ -339,11 +387,15 @@ export function FlightControls({
     if (routeTrip) {
       velocity.current.copy(flightRef.current.velocity);
       acceleration.current.copy(flightRef.current.acceleration);
-      applyCameraAngles(state.camera, yawRef.current, pitchRef.current);
+      applyCameraAngles(
+        state.camera,
+        yawRef.current,
+        pitchRef.current,
+        rollRef.current,
+      );
       return;
     }
 
-    const dt = Math.min(delta, 0.05);
     const mobileFlight = isMobileFlightActive();
 
     if (
@@ -366,8 +418,6 @@ export function FlightControls({
     }
 
     const camera = state.camera;
-    const el = gl.domElement;
-    const pointerLocked = document.pointerLockElement === el;
 
     if (mobileFlight) {
       const ldx = mobileTouchState.lookDx;
@@ -386,8 +436,18 @@ export function FlightControls({
       }
     }
 
-    directionFromAngles(yawRef.current, pitchRef.current, forward.current);
-    right.current.crossVectors(forward.current, up.current).normalize();
+    directionFromAngles(
+      yawRef.current,
+      pitchRef.current,
+      forward.current,
+      rollRef.current,
+    );
+    rightFromAngles(
+      yawRef.current,
+      pitchRef.current,
+      rollRef.current,
+      right.current,
+    );
 
     const k = pointerLocked ? keys.current : new Set<string>();
     if (mobileFlight) {
@@ -548,7 +608,12 @@ export function FlightControls({
 
     viewerPosition.addScaledVector(vel, dt);
 
-    applyCameraAngles(camera, yawRef.current, pitchRef.current);
+    applyCameraAngles(
+      camera,
+      yawRef.current,
+      pitchRef.current,
+      rollRef.current,
+    );
 
     const thrusting =
       (warpEngaged ||

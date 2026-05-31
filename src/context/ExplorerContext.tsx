@@ -8,6 +8,7 @@ import {
   useMemo,
   useRef,
   useState,
+  useLayoutEffect,
   type ReactNode,
 } from "react";
 import type { PlanetId } from "@/data/planets";
@@ -25,6 +26,8 @@ import {
 } from "@/lib/discoveryAutopilot";
 import { resetRouteTourState } from "@/lib/routeTour";
 import { FLIGHT_RETICLE_IDLE_MS, SCENIC_CHROME_IDLE_MS } from "@/lib/scenicChrome";
+import { isScreensaverMode } from "@/lib/screensaverConfig";
+import { activateScreensaverScenicTour } from "@/lib/screensaverScenic";
 
 interface ExplorerState {
   selectedId: PlanetId | null;
@@ -60,6 +63,8 @@ interface ExplorerState {
   scenicChromeVisible: boolean;
   /** Center reticle visibility during pointer-lock flight. */
   flightReticleVisible: boolean;
+  /** Live AI guide log (facts + transit telemetry). */
+  aiEnhanced: boolean;
 }
 
 interface ExplorerContextValue extends ExplorerState {
@@ -103,6 +108,7 @@ interface ExplorerContextValue extends ExplorerState {
   exitNavigation: () => void;
   /** Exit pointer-lock flight and cancel any autopilot route. */
   exitAutopilot: () => void;
+  setAiEnhanced: (enabled: boolean) => void;
 }
 
 const ExplorerContext = createContext<ExplorerContextValue | null>(null);
@@ -130,9 +136,12 @@ export function ExplorerProvider({ children }: { children: ReactNode }) {
   const [routeWaypoints, setRouteWaypoints] = useState<NavTargetId[]>([]);
   const [routeLegIndex, setRouteLegIndex] = useState(0);
   const [discoveryAutopilotActive, setDiscoveryAutopilotActiveState] =
-    useState(false);
+    useState(() =>
+      typeof window !== "undefined" ? isScreensaverMode() : false,
+    );
   const [scenicChromeVisible, setScenicChromeVisible] = useState(true);
   const [flightReticleVisible, setFlightReticleVisible] = useState(true);
+  const [aiEnhanced, setAiEnhanced] = useState(false);
   const routeRef = useRef<NavTargetId[]>([]);
   const scenicChromeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(
     null,
@@ -150,6 +159,13 @@ export function ExplorerProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     navigationActiveRef.current = navigationActive;
   }, [navigationActive]);
+
+  useLayoutEffect(() => {
+    if (!isScreensaverMode()) return;
+    if (activateScreensaverScenicTour()) {
+      setDiscoveryAutopilotActiveState(true);
+    }
+  }, []);
 
   const clearFlightReticleTimer = useCallback(() => {
     if (flightReticleTimerRef.current) {
@@ -295,6 +311,15 @@ export function ExplorerProvider({ children }: { children: ReactNode }) {
   const setDiscoveryAutopilotActive = useCallback(
     (active: boolean) => {
       if (active) {
+        if (
+          discoveryAutopilotState.active &&
+          discoveryAutopilotState.phase === "orbit" &&
+          discoveryAutopilotState.currentTargetId
+        ) {
+          setDiscoveryAutopilotActiveState(true);
+          return;
+        }
+
         routeRef.current = [];
         setRouteActive(false);
         setRouteWaypoints([]);
@@ -471,6 +496,7 @@ export function ExplorerProvider({ children }: { children: ReactNode }) {
       discoveryAutopilotActive,
       scenicChromeVisible,
       flightReticleVisible,
+      aiEnhanced,
       openPlanetInfo,
       navigateToTarget,
       selectReticleTarget,
@@ -503,6 +529,7 @@ export function ExplorerProvider({ children }: { children: ReactNode }) {
       setNavigationActive: setNavigationActiveWrapped,
       exitNavigation,
       exitAutopilot,
+      setAiEnhanced,
     }),
     [
       selectedId,
@@ -528,6 +555,7 @@ export function ExplorerProvider({ children }: { children: ReactNode }) {
       discoveryAutopilotActive,
       scenicChromeVisible,
       flightReticleVisible,
+      aiEnhanced,
       openPlanetInfo,
       navigateToTarget,
       selectReticleTarget,

@@ -3,14 +3,18 @@
 import { useEffect } from "react";
 import { ExplorerProvider, useExplorer } from "@/context/ExplorerContext";
 import { useMobileLandscape } from "@/hooks/useMobileLandscape";
+import { useScreensaverMode } from "@/hooks/useScreensaverMode";
 import SolarSystemCanvas from "@/components/explorer/SolarSystemCanvas";
-import { EarthLandCinematic } from "./EarthLandCinematic";
 import { MobileFlightControls } from "./MobileFlightControls";
 import { OptionsMenu } from "./OptionsMenu";
 import { PlanetPanel } from "./PlanetPanel";
 import { SpeedHud } from "./SpeedHud";
 import { FlightReticle } from "./FlightReticle";
 import { ScenicChromeController } from "./ScenicChromeController";
+import { ScreensaverBootstrap } from "./ScreensaverBootstrap";
+import { ScreensaverBootOverlay } from "./ScreensaverBootOverlay";
+import { ScreensaverBootGate } from "./ScreensaverErrorBoundary";
+import { GuideLog } from "./GuideLog";
 import { UtcClock } from "./UtcClock";
 
 function GlobalShortcuts() {
@@ -70,32 +74,49 @@ function NavigationHint() {
 function ExplorerShell() {
   const { navigationActive } = useExplorer();
   const mobileLandscape = useMobileLandscape();
+  const screensaver = useScreensaverMode();
 
   return (
     <main
       className={`relative h-screen w-full overflow-hidden bg-[#030508] ${
-        navigationActive && !mobileLandscape ? "cursor-none" : "cursor-default"
+        navigationActive && !mobileLandscape && !screensaver
+          ? "cursor-none"
+          : "cursor-default"
       }`}
     >
       <SolarSystemCanvas />
-      <MobileFlightControls />
-      <EarthLandCinematic />
-      <FlightReticle />
-      <UtcClock />
-      <SpeedHud />
-      <OptionsMenu />
-      <PlanetPanel />
-      <NavigationHint />
+      {!screensaver && <MobileFlightControls />}
+      {!screensaver && <FlightReticle />}
+      {!screensaver && <UtcClock />}
+      {!screensaver && <SpeedHud />}
+      {!screensaver && <OptionsMenu />}
+      {!screensaver && <PlanetPanel />}
+      {!screensaver && <GuideLog />}
+      {!screensaver && <NavigationHint />}
     </main>
+  );
+}
+
+function ExplorerChrome() {
+  const screensaver = useScreensaverMode();
+
+  return (
+    <>
+      <ScreensaverBootstrap />
+      {!screensaver && <GlobalShortcuts />}
+      {!screensaver && <ScenicChromeController />}
+      <ExplorerShell />
+      <ScreensaverBootOverlay />
+    </>
   );
 }
 
 export function ExplorerView() {
   return (
-    <ExplorerProvider>
-      <GlobalShortcuts />
-      <ScenicChromeController />
-      <ExplorerShell />
-    </ExplorerProvider>
+    <ScreensaverBootGate>
+      <ExplorerProvider>
+        <ExplorerChrome />
+      </ExplorerProvider>
+    </ScreensaverBootGate>
   );
 }

@@ -1,0 +1,129 @@
+body {
+  margin: 0;
+  font-family: system-ui, sans-serif;
+  background: #030508;
+  color: #d4d4d8;
+}
+
+main {
+  max-width: 28rem;
+  margin: 0 auto;
+  padding: 1.5rem;
+}
+
+h1 {
+  margin: 0 0 0.5rem;
+  font-size: 1.25rem;
+  font-weight: 500;
+}
+
+.lede {
+  margin: 0 0 1.25rem;
+  font-size: 0.875rem;
+  line-height: 1.5;
+  color: #71717a;
+}
+
+form {
+  display: grid;
+  gap: 1rem;
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.875rem;
+}
+
+.field {
+  display: grid;
+  gap: 0.35rem;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #71717a;
+}
+
+.field input[type="number"],
+.field input[type="url"],
+.field select {
+  text-transform: none;
+  letter-spacing: normal;
+  font-size: 0.875rem;
+  padding: 0.5rem 0.6rem;
+  border-radius: 0.375rem;
+  border: 1px solid #27272a;
+  background: #09090b;
+  color: #e4e4e7;
+}
+
+.inline {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.inline output {
+  min-width: 3.5rem;
+  font-variant-numeric: tabular-nums;
+  text-transform: none;
+  letter-spacing: normal;
+  color: #a1a1aa;
+}
+
+.field small {
+  text-transform: none;
+  letter-spacing: normal;
+  color: #52525b;
+}
+
+.hint {
+  margin: -0.35rem 0 0;
+  font-size: 0.8125rem;
+  line-height: 1.45;
+  color: #52525b;
+}
+
+.actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+button {
+  border: 1px solid #3f3f46;
+  background: #18181b;
+  color: #e4e4e7;
+  border-radius: 0.375rem;
+  padding: 0.45rem 0.85rem;
+  font-size: 0.8125rem;
+  cursor: pointer;
+}
+
+button.secondary {
+  background: transparent;
+}
+
+button:hover {
+  border-color: #71717a;
+}
+
+.status {
+  min-height: 1.25rem;
+  margin: 1rem 0 0;
+  font-size: 0.8125rem;
+  color: #71717a;
+}
+
+.status[data-ok="1"] {
+  color: #38bdf8;
+}
+
+.status[data-ok="0"] {
+  color: #f87171;
+}
+
+code {
+  font-family: ui-monospace, monospace;
+  font-size: 0.8125rem;
+}

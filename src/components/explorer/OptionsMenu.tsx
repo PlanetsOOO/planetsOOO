@@ -28,6 +28,8 @@ export function OptionsMenu() {
     setDiscoveryAutopilotActive,
     scenicChromeVisible,
     routeActive,
+    aiEnhanced,
+    setAiEnhanced,
   } = useExplorer();
   const panelRef = useRef<HTMLDivElement>(null);
 
@@ -83,6 +85,11 @@ export function OptionsMenu() {
             checked={discoveryAutopilotActive}
             onChange={setDiscoveryAutopilotActive}
             disabled={routeActive}
+          />
+          <Toggle
+            label="AI enhanced"
+            checked={aiEnhanced}
+            onChange={setAiEnhanced}
           />
           <Toggle
             label="Orbit paths"

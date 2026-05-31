@@ -87,15 +87,32 @@ export function getLookTarget(planetPos: THREE.Vector3): THREE.Vector3 {
   return _look.copy(planetPos);
 }
 
-/** Unit look direction from YXZ yaw/pitch (matches Three.js camera rotation). */
+/** Radians per second for ← / → roll in flight and scenic tour. */
+export const CAMERA_ROLL_SPEED = 1.35;
+
+/** Unit look direction from YXZ yaw/pitch/roll (matches Three.js camera rotation). */
 export function directionFromAngles(
   yaw: number,
   pitch: number,
   target = new THREE.Vector3(),
+  roll = 0,
 ): THREE.Vector3 {
   return target
     .set(0, 0, -1)
-    .applyEuler(_euler.set(pitch, yaw, 0))
+    .applyEuler(_euler.set(pitch, yaw, roll))
+    .normalize();
+}
+
+/** Camera-right axis from YXZ yaw/pitch/roll. */
+export function rightFromAngles(
+  yaw: number,
+  pitch: number,
+  roll: number,
+  target = new THREE.Vector3(),
+): THREE.Vector3 {
+  return target
+    .set(1, 0, 0)
+    .applyEuler(_euler.set(pitch, yaw, roll))
     .normalize();
 }
 
@@ -121,14 +138,15 @@ export function cameraAnglesTowardWorldPoint(
   return cameraAnglesFromPosition(new THREE.Vector3(0, 0, 0), worldTarget);
 }
 
-/** Apply YXZ rotation to a Three.js camera from yaw/pitch refs. */
+/** Apply YXZ rotation to a Three.js camera from yaw/pitch/roll refs. */
 export function applyCameraAngles(
   camera: THREE.Camera,
   yaw: number,
   pitch: number,
+  roll = 0,
 ): void {
   camera.rotation.order = "YXZ";
   camera.rotation.y = yaw;
   camera.rotation.x = pitch;
-  camera.rotation.z = 0;
+  camera.rotation.z = roll;
 }

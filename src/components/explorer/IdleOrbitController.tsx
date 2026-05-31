@@ -26,6 +26,7 @@ import {
 import { discoveryAutopilotState } from "@/lib/discoveryAutopilot";
 import { inputKeys } from "@/lib/inputState";
 import { isMobileFlightActive, mobileTouchState } from "@/lib/mobileTouchState";
+import { isScreensaverMode } from "@/lib/screensaverConfig";
 import {
   applyCameraAngles,
   cameraAnglesFromPosition,
@@ -36,6 +37,7 @@ import { applySpawnView, viewerPosition } from "@/lib/viewerState";
 interface IdleOrbitControllerProps {
   yawRef: React.MutableRefObject<number>;
   pitchRef: React.MutableRefObject<number>;
+  rollRef: React.MutableRefObject<number>;
 }
 
 const bodyHelio = new THREE.Vector3();
@@ -117,12 +119,19 @@ function resolveOrbitAnchor(): PlanetId | null {
 export function IdleOrbitController({
   yawRef,
   pitchRef,
+  rollRef,
 }: IdleOrbitControllerProps) {
   const { autoNavigating, discoveryAutopilotActive } = useExplorer();
   const { camera } = useThree();
   const spawned = useRef(false);
 
   useLayoutEffect(() => {
+    if (isScreensaverMode()) {
+      idleOrbitState.active = false;
+      spawned.current = true;
+      return;
+    }
+
     applySpawnView();
     const earth = getPlanet("earth");
     defaultOrbitFrame(idleOrbitState.frame, earth.radius);
@@ -136,12 +145,13 @@ export function IdleOrbitController({
     const { yaw, pitch } = cameraAnglesFromPosition(viewerPosition, earthPos);
     yawRef.current = yaw;
     pitchRef.current = pitch;
-    applyCameraAngles(camera, yaw, pitch);
+    applyCameraAngles(camera, yaw, pitch, rollRef.current);
     spawned.current = true;
-  }, [camera, yawRef, pitchRef]);
+  }, [camera, yawRef, pitchRef, rollRef]);
 
   useFrame((_, delta) => {
     if (!spawned.current || autoNavigating) return;
+    if (isScreensaverMode() && discoveryAutopilotActive) return;
     if (
       discoveryAutopilotActive &&
       (discoveryAutopilotState.phase === "orbit" ||
@@ -203,7 +213,7 @@ export function IdleOrbitController({
     );
     yawRef.current = yaw;
     pitchRef.current = pitch;
-    applyCameraAngles(camera, yaw, pitch);
+    applyCameraAngles(camera, yaw, pitch, rollRef.current);
   });
 
   return null;
