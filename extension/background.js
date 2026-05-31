@@ -229,9 +229,9 @@ async function openScreensaver({ preview = false } = {}) {
   }
 }
 
-async function closeScreensaver() {
-  const tabId = screensaverTabId;
-  const windowId = screensaverWindowId;
+async function closeScreensaver(fallback = {}) {
+  const tabId = screensaverTabId ?? fallback.tabId ?? null;
+  const windowId = screensaverWindowId ?? fallback.windowId ?? null;
 
   screensaverTabId = null;
   screensaverWindowId = null;
@@ -327,7 +327,10 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
   }
 
   if (message?.type === "close") {
-    closeScreensaver().then(sendResponse);
+    closeScreensaver({
+      tabId: _sender?.tab?.id,
+      windowId: _sender?.tab?.windowId,
+    }).then(sendResponse);
     return true;
   }
 

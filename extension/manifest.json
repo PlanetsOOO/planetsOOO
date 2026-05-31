@@ -1,9 +1,21 @@
 {
   "manifest_version": 3,
   "name": "Orbit Screensaver",
-  "version": "2.1.0",
+  "version": "2.2.0",
   "description": "A Manifest V3 fullscreen screensaver for the PlanetsOOO scenic tour.",
   "permissions": ["idle", "storage", "tabs"],
+  "content_scripts": [
+    {
+      "matches": [
+        "https://www.planets.ooo/*",
+        "https://planets.ooo/*",
+        "http://localhost/*",
+        "http://127.0.0.1/*"
+      ],
+      "js": ["planetsContent.js"],
+      "run_at": "document_start"
+    }
+  ],
   "background": {
     "service_worker": "background.js"
   },

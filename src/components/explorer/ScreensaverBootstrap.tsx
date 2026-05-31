@@ -70,38 +70,43 @@ export function ScreensaverBootstrap() {
     };
 
     const exitScreensaver = () => {
+      if (document.fullscreenElement) {
+        void document.exitFullscreen?.().catch(() => {});
+      }
       window.close();
     };
 
     const onKeyDown = (e: KeyboardEvent) => {
-      if (e.code !== config.enterFlightKey) return;
+      if (e.code !== config.enterFlightKey || e.metaKey || e.ctrlKey || e.altKey) {
+        e.preventDefault();
+        e.stopImmediatePropagation();
+        exitScreensaver();
+        return;
+      }
       if (e.repeat) return;
-      if (e.metaKey || e.ctrlKey || e.altKey) return;
       e.preventDefault();
+      e.stopImmediatePropagation();
       enterFlight();
     };
 
-    const onContextMenu = (e: MouseEvent) => {
-      if (config.exitGesture !== "contextmenu") return;
+    const onPointerExit = (e: MouseEvent | PointerEvent) => {
       e.preventDefault();
+      e.stopImmediatePropagation();
       exitScreensaver();
     };
 
-    const onMouseDown = (e: MouseEvent) => {
-      if (config.exitGesture !== "middleclick") return;
-      if (e.button !== 1) return;
-      e.preventDefault();
-      exitScreensaver();
-    };
-
-    window.addEventListener("keydown", onKeyDown);
-    window.addEventListener("contextmenu", onContextMenu);
-    window.addEventListener("mousedown", onMouseDown);
+    window.addEventListener("keydown", onKeyDown, true);
+    window.addEventListener("pointerdown", onPointerExit, true);
+    window.addEventListener("mousedown", onPointerExit, true);
+    window.addEventListener("click", onPointerExit, true);
+    window.addEventListener("contextmenu", onPointerExit, true);
 
     return () => {
-      window.removeEventListener("keydown", onKeyDown);
-      window.removeEventListener("contextmenu", onContextMenu);
-      window.removeEventListener("mousedown", onMouseDown);
+      window.removeEventListener("keydown", onKeyDown, true);
+      window.removeEventListener("pointerdown", onPointerExit, true);
+      window.removeEventListener("mousedown", onPointerExit, true);
+      window.removeEventListener("click", onPointerExit, true);
+      window.removeEventListener("contextmenu", onPointerExit, true);
     };
   }, [
     screensaver,
