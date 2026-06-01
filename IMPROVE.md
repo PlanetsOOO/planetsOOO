@@ -96,6 +96,8 @@ Keep the last ~10 entries. Delete rows that no longer teach you anything.
 | 2026-05-31 | Screensaver flight key could leave scenic retry fighting WASD | Stop scenic retry after flight entry; mark extension flight mode | Check WASD after entering with configured key |
 | 2026-05-31 | Publish screensaver options still exposed test internals | Hide source/URL, add display selection, flight idle scenic return | Check selected-display preview + 15s idle return |
 | 2026-05-31 | Label key and scenic return felt wrong in screensaver | Let L pass through; resume scenic in-place from current POV | Check L toggle and 15s idle return |
+| 2026-06-01 | Flight idle return could be reset by pointer-lock mouse noise | Ignore tiny mousemove events for screensaver flight idle | Check hands-off return after 15s |
+| 2026-06-01 | Flight idle scenic return forced an incomplete orbit | Return through scenic transit from current POV | Check same-window transit after 15s |
 | | | | |
 
 ---

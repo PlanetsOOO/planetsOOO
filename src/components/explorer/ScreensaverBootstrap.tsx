@@ -3,10 +3,7 @@
 import { useCallback, useEffect, useLayoutEffect, useRef } from "react";
 import type { NavTargetId } from "@/data/navigationTargets";
 import { useExplorer } from "@/context/ExplorerContext";
-import {
-  beginDiscoveryOrbitPhase,
-  discoveryAutopilotState,
-} from "@/lib/discoveryAutopilot";
+import { discoveryAutopilotState } from "@/lib/discoveryAutopilot";
 import { idleOrbitState } from "@/lib/idleOrbitState";
 import { readScreensaverConfig } from "@/lib/screensaverConfig";
 import { activateScreensaverPresentation } from "@/lib/screensaverPresentation";
@@ -14,6 +11,7 @@ import { activateScreensaverScenicTour } from "@/lib/screensaverScenic";
 import { useScreensaverMode } from "@/hooks/useScreensaverMode";
 
 const FLIGHT_IDLE_RETURN_MS = 15_000;
+const FLIGHT_IDLE_MOUSE_EPSILON = 2;
 
 function requestCanvasPointerLock(): void {
   const canvas = document.querySelector("canvas") as HTMLCanvasElement | null;
@@ -31,6 +29,7 @@ export function ScreensaverBootstrap() {
     dismissInfo,
     setNavigationActive,
     discoveryAutopilotActive,
+    returnToDiscoveryScenic,
     showLabels,
     setShowLabels,
   } = useExplorer();
@@ -98,17 +97,7 @@ export function ScreensaverBootstrap() {
       }
 
       const returnTarget = returnTargetRef.current;
-      if (returnTarget) {
-        discoveryAutopilotState.active = true;
-        discoveryAutopilotState.currentTargetId = returnTarget;
-        discoveryAutopilotState.queuedTargetId = null;
-        discoveryAutopilotState.searchFocusLocked = false;
-        beginDiscoveryOrbitPhase();
-        setDiscoveryAutopilotActive(true);
-        return;
-      }
-
-      startScenicTour(true);
+      returnToDiscoveryScenic(returnTarget);
     };
 
     const markFlightActivity = () => {
@@ -212,22 +201,31 @@ export function ScreensaverBootstrap() {
       markFlightActivity();
     };
 
+    const onFlightMouseMove = (e: MouseEvent) => {
+      const movement =
+        Math.abs(e.movementX ?? 0) + Math.abs(e.movementY ?? 0);
+      if (movement < FLIGHT_IDLE_MOUSE_EPSILON) return;
+      markFlightActivity();
+    };
+
     window.addEventListener("keydown", onKeyDown, true);
+    window.addEventListener("keyup", onFlightActivity, true);
     window.addEventListener("pointerdown", onPointerExit, true);
     window.addEventListener("mousedown", onPointerExit, true);
     window.addEventListener("click", onPointerExit, true);
     window.addEventListener("contextmenu", onPointerExit, true);
-    window.addEventListener("mousemove", onFlightActivity, true);
+    window.addEventListener("mousemove", onFlightMouseMove, true);
     window.addEventListener("wheel", onFlightActivity, true);
 
     return () => {
       clearFlightIdleTimer();
       window.removeEventListener("keydown", onKeyDown, true);
+      window.removeEventListener("keyup", onFlightActivity, true);
       window.removeEventListener("pointerdown", onPointerExit, true);
       window.removeEventListener("mousedown", onPointerExit, true);
       window.removeEventListener("click", onPointerExit, true);
       window.removeEventListener("contextmenu", onPointerExit, true);
-      window.removeEventListener("mousemove", onFlightActivity, true);
+      window.removeEventListener("mousemove", onFlightMouseMove, true);
       window.removeEventListener("wheel", onFlightActivity, true);
     };
   }, [
@@ -237,6 +235,7 @@ export function ScreensaverBootstrap() {
     setDiscoveryAutopilotActive,
     setNavigationActive,
     setShowLabels,
+    returnToDiscoveryScenic,
     startScenicTour,
   ]);
 

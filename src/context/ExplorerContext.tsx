@@ -91,6 +91,8 @@ interface ExplorerContextValue extends ExplorerState {
   skipDiscoveryTarget: () => void;
   /** Resume scenic transit if autopilot was interrupted mid-leg. */
   resumeDiscoveryTransit: () => void;
+  /** Return screensaver flight to scenic transit from the current POV. */
+  returnToDiscoveryScenic: (targetId?: NavTargetId | null) => void;
   dismissInfo: () => void;
   setPaused: (paused: boolean) => void;
   setSpeed: (speed: number) => void;
@@ -162,9 +164,16 @@ export function ExplorerProvider({ children }: { children: ReactNode }) {
 
   useLayoutEffect(() => {
     if (!isScreensaverMode()) return;
-    if (activateScreensaverScenicTour()) {
-      setDiscoveryAutopilotActiveState(true);
-    }
+    if (!activateScreensaverScenicTour()) return;
+
+    let cancelled = false;
+    queueMicrotask(() => {
+      if (!cancelled) setDiscoveryAutopilotActiveState(true);
+    });
+
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   const clearFlightReticleTimer = useCallback(() => {
@@ -307,6 +316,45 @@ export function ExplorerProvider({ children }: { children: ReactNode }) {
     setNavTargetId(target);
     setAutoNavigating(true);
   }, []);
+
+  const returnToDiscoveryScenic = useCallback(
+    (targetId?: NavTargetId | null) => {
+      routeRef.current = [];
+      setRouteActive(false);
+      setRouteWaypoints([]);
+      setRouteLegIndex(0);
+      setMenuOpen(false);
+
+      const target =
+        targetId ??
+        discoveryAutopilotState.queuedTargetId ??
+        pickRandomNavTarget(discoveryAutopilotState.currentTargetId);
+
+      discoveryAutopilotState.active = true;
+      discoveryAutopilotState.phase = "transit";
+      discoveryAutopilotState.currentTargetId = target;
+      discoveryAutopilotState.queuedTargetId = null;
+      discoveryAutopilotState.searchFocusLocked = false;
+      discoveryAutopilotState.orbitStartedMs = 0;
+      discoveryAutopilotState.departStartedMs = 0;
+      discoveryAutopilotState.focusLookBlend = 0;
+      discoveryAutopilotState.focusTargetId = target;
+      discoveryAutopilotState.focusHandedOff = false;
+      resetDiscoveryLegLock();
+      markDiscoveryDeparture();
+
+      setDiscoveryAutopilotActiveState(true);
+      launchAutopilotLeg(target);
+      markScenicChromeActivity();
+      markFlightReticleActivity();
+    },
+    [
+      launchAutopilotLeg,
+      markFlightReticleActivity,
+      markScenicChromeActivity,
+      setMenuOpen,
+    ],
+  );
 
   const setDiscoveryAutopilotActive = useCallback(
     (active: boolean) => {
@@ -513,6 +561,7 @@ export function ExplorerProvider({ children }: { children: ReactNode }) {
       advanceDiscoveryLeg,
       skipDiscoveryTarget,
       resumeDiscoveryTransit,
+      returnToDiscoveryScenic,
       dismissInfo,
       setPaused,
       setSpeed,
@@ -572,6 +621,7 @@ export function ExplorerProvider({ children }: { children: ReactNode }) {
       advanceDiscoveryLeg,
       skipDiscoveryTarget,
       resumeDiscoveryTransit,
+      returnToDiscoveryScenic,
       dismissInfo,
       exitNavigation,
       exitAutopilot,
