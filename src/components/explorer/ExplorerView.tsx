@@ -17,11 +17,34 @@ import { ScreensaverBootGate } from "./ScreensaverErrorBoundary";
 import { GuideLog } from "./GuideLog";
 import { UtcClock } from "./UtcClock";
 
+function isEditableTarget(target: EventTarget | null): boolean {
+  if (!(target instanceof HTMLElement)) return false;
+  return (
+    target.isContentEditable ||
+    target.tagName === "INPUT" ||
+    target.tagName === "TEXTAREA" ||
+    target.tagName === "SELECT"
+  );
+}
+
 function GlobalShortcuts() {
-  const { dismissInfo, setMenuOpen, exitAutopilot } = useExplorer();
+  const { dismissInfo, setMenuOpen, exitAutopilot, showLabels, setShowLabels } =
+    useExplorer();
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
+      if (
+        e.key.toLowerCase() === "l" &&
+        !e.metaKey &&
+        !e.ctrlKey &&
+        !e.altKey &&
+        !isEditableTarget(e.target)
+      ) {
+        e.preventDefault();
+        setShowLabels(!showLabels);
+        return;
+      }
+
       if (e.key === "Tab") {
         const menuPanel = document.querySelector("[data-explorer-menu]");
         if (menuPanel?.contains(document.activeElement)) return;
@@ -37,7 +60,7 @@ function GlobalShortcuts() {
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [dismissInfo, setMenuOpen, exitAutopilot]);
+  }, [dismissInfo, setMenuOpen, exitAutopilot, showLabels, setShowLabels]);
 
   return null;
 }

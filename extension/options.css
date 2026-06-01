@@ -45,6 +45,26 @@ form {
   color: #71717a;
 }
 
+fieldset.field {
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.display-list {
+  display: grid;
+  gap: 0.4rem;
+  text-transform: none;
+  letter-spacing: normal;
+  color: #a1a1aa;
+}
+
+.display-option {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
 .field input[type="number"],
 .field input[type="url"],
 .field select {

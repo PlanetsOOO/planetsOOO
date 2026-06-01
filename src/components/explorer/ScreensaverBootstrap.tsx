@@ -9,6 +9,8 @@ import { activateScreensaverPresentation } from "@/lib/screensaverPresentation";
 import { activateScreensaverScenicTour } from "@/lib/screensaverScenic";
 import { useScreensaverMode } from "@/hooks/useScreensaverMode";
 
+const FLIGHT_IDLE_RETURN_MS = 15_000;
+
 function requestCanvasPointerLock(): void {
   const canvas = document.querySelector("canvas") as HTMLCanvasElement | null;
   canvas?.focus?.({ preventScroll: true });
@@ -25,18 +27,29 @@ export function ScreensaverBootstrap() {
     dismissInfo,
     setNavigationActive,
     discoveryAutopilotActive,
+    showLabels,
+    setShowLabels,
   } = useExplorer();
   const flightEnteredRef = useRef(false);
+  const flightActiveRef = useRef(false);
+  const showLabelsRef = useRef(showLabels);
+  const flightIdleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const startScenicTour = useCallback(() => {
-    if (flightEnteredRef.current) return;
+  useEffect(() => {
+    showLabelsRef.current = showLabels;
+  }, [showLabels]);
+
+  const startScenicTour = useCallback((force = false) => {
+    if (flightEnteredRef.current && !force) return;
     idleOrbitState.active = false;
     dismissInfo();
     setMenuOpen(false);
     if (activateScreensaverScenicTour()) {
       setDiscoveryAutopilotActive(true);
     }
-    flightEnteredRef.current = false;
+    if (!force) {
+      flightEnteredRef.current = false;
+    }
   }, [dismissInfo, setMenuOpen, setDiscoveryAutopilotActive]);
 
   useLayoutEffect(() => {
@@ -64,16 +77,45 @@ export function ScreensaverBootstrap() {
   useEffect(() => {
     if (!screensaver) return;
 
+    const clearFlightIdleTimer = () => {
+      if (flightIdleTimerRef.current) {
+        window.clearTimeout(flightIdleTimerRef.current);
+        flightIdleTimerRef.current = null;
+      }
+    };
+
+    const returnToScenicTour = () => {
+      flightActiveRef.current = false;
+      clearFlightIdleTimer();
+      setNavigationActive(false);
+      if (document.pointerLockElement) {
+        document.exitPointerLock();
+      }
+      startScenicTour(true);
+    };
+
+    const markFlightActivity = () => {
+      if (!flightActiveRef.current) return;
+      clearFlightIdleTimer();
+      flightIdleTimerRef.current = window.setTimeout(
+        returnToScenicTour,
+        FLIGHT_IDLE_RETURN_MS,
+      );
+    };
+
     const enterFlight = () => {
-      if (flightEnteredRef.current) return;
+      if (flightActiveRef.current) return;
       flightEnteredRef.current = true;
+      flightActiveRef.current = true;
       idleOrbitState.active = false;
       setDiscoveryAutopilotActive(false);
       setNavigationActive(true);
       requestCanvasPointerLock();
+      markFlightActivity();
     };
 
     const exitScreensaver = () => {
+      clearFlightIdleTimer();
       if (document.fullscreenElement) {
         void document.exitFullscreen?.().catch(() => {});
       }
@@ -103,14 +145,42 @@ export function ScreensaverBootstrap() {
         e.stopImmediatePropagation();
         if (e.repeat) return;
         exitScreensaver();
+        return;
       }
+
+      if (e.code === config.enterFlightKey && !modified) {
+        if (e.repeat) return;
+        e.preventDefault();
+        e.stopImmediatePropagation();
+        enterFlight();
+        return;
+      }
+
+      if (e.key.toLowerCase() === "l" && !modified) {
+        e.preventDefault();
+        e.stopImmediatePropagation();
+        const next = !showLabelsRef.current;
+        showLabelsRef.current = next;
+        setShowLabels(next);
+        markFlightActivity();
+        return;
+      }
+
+      markFlightActivity();
     };
 
     const onPointerExit = (e: MouseEvent | PointerEvent) => {
-      if (flightEnteredRef.current) return;
+      if (flightEnteredRef.current) {
+        markFlightActivity();
+        return;
+      }
       e.preventDefault();
       e.stopImmediatePropagation();
       exitScreensaver();
+    };
+
+    const onFlightActivity = () => {
+      markFlightActivity();
     };
 
     window.addEventListener("keydown", onKeyDown, true);
@@ -118,13 +188,18 @@ export function ScreensaverBootstrap() {
     window.addEventListener("mousedown", onPointerExit, true);
     window.addEventListener("click", onPointerExit, true);
     window.addEventListener("contextmenu", onPointerExit, true);
+    window.addEventListener("mousemove", onFlightActivity, true);
+    window.addEventListener("wheel", onFlightActivity, true);
 
     return () => {
+      clearFlightIdleTimer();
       window.removeEventListener("keydown", onKeyDown, true);
       window.removeEventListener("pointerdown", onPointerExit, true);
       window.removeEventListener("mousedown", onPointerExit, true);
       window.removeEventListener("click", onPointerExit, true);
       window.removeEventListener("contextmenu", onPointerExit, true);
+      window.removeEventListener("mousemove", onFlightActivity, true);
+      window.removeEventListener("wheel", onFlightActivity, true);
     };
   }, [
     screensaver,
@@ -132,6 +207,8 @@ export function ScreensaverBootstrap() {
     config.exitKey,
     setDiscoveryAutopilotActive,
     setNavigationActive,
+    setShowLabels,
+    startScenicTour,
   ]);
 
   return null;

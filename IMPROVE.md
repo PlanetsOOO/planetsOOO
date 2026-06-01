@@ -92,6 +92,9 @@ Keep the last ~10 entries. Delete rows that no longer teach you anything.
 | 2026-05-22 | Route planner skipped observation | Tour dwell + scenic cruise | **Keep** |
 | 2026-05-22 | Asteroid field inaccurate at scale | Removed field | **Keep** |
 | 2026-05-22 | Heavy governance docs unused | Removed; this file instead | **Keep** |
+| 2026-05-30 | Screensaver fullscreen could bounce during scenic changes | Guarded extension fullscreen recovery; removed tab-complete retry | Check idle preview through one leg change |
+| 2026-05-31 | Screensaver flight key could leave scenic retry fighting WASD | Stop scenic retry after flight entry; mark extension flight mode | Check WASD after entering with configured key |
+| 2026-05-31 | Publish screensaver options still exposed test internals | Hide source/URL, add display selection, flight idle scenic return | Check selected-display preview + 15s idle return |
 | | | | |
 
 ---

@@ -3,6 +3,7 @@ const DEFAULTS = {
   idleMinutes: 5,
   source: "planets",
   siteUrl: "https://www.planets.ooo/",
+  displayIds: [],
   flightKey: "Backquote",
   exitKey: "Backquote",
   closeOnActive: false,
@@ -11,9 +12,7 @@ const DEFAULTS = {
 
 const form = document.getElementById("form");
 const enabledEl = document.getElementById("enabled");
-const sourceEl = document.getElementById("source");
-const siteUrlEl = document.getElementById("siteUrl");
-const siteUrlFieldEl = document.getElementById("siteUrlField");
+const displayListEl = document.getElementById("displayList");
 const flightKeyEl = document.getElementById("flightKey");
 const exitKeyEl = document.getElementById("exitKey");
 const idleMinutesEl = document.getElementById("idleMinutes");
@@ -35,25 +34,75 @@ function setStatus(text, ok = true) {
   statusEl.dataset.ok = ok ? "1" : "0";
 }
 
-function syncSourceFields() {
-  siteUrlFieldEl.style.display = sourceEl.value === "planets" ? "grid" : "none";
+function displayName(display, index) {
+  return display.name || `Display ${index + 1}`;
+}
+
+function displayGeometry(display) {
+  const bounds = display.bounds;
+  return `${bounds.width}×${bounds.height} @ ${bounds.left},${bounds.top}`;
+}
+
+async function getDisplays() {
+  if (!chrome.system?.display?.getInfo) return [];
+  return new Promise((resolve) => {
+    chrome.system.display.getInfo((displays) => resolve(displays));
+  });
+}
+
+function renderDisplays(displays, selectedIds) {
+  displayListEl.textContent = "";
+
+  if (displays.length === 0) {
+    displayListEl.textContent =
+      "Display selection is unavailable in this Chrome build. Orbit will use the current display.";
+    return;
+  }
+
+  const selected = new Set(selectedIds?.length ? selectedIds : []);
+  if (selected.size === 0) {
+    const primary = displays.find((display) => display.isPrimary) ?? displays[0];
+    selected.add(primary.id);
+  }
+
+  for (const [index, display] of displays.entries()) {
+    const label = document.createElement("label");
+    label.className = "display-option";
+
+    const checkbox = document.createElement("input");
+    checkbox.type = "checkbox";
+    checkbox.name = "displayIds";
+    checkbox.value = display.id;
+    checkbox.checked = selected.has(display.id);
+
+    const text = document.createElement("span");
+    text.textContent = `${displayName(display, index)} · ${displayGeometry(display)}${
+      display.isPrimary ? " · primary" : ""
+    }`;
+
+    label.append(checkbox, text);
+    displayListEl.append(label);
+  }
+}
+
+function selectedDisplayIds() {
+  return Array.from(
+    displayListEl.querySelectorAll('input[name="displayIds"]:checked'),
+  ).map((input) => input.value);
 }
 
 async function loadSettings() {
   const settings = { ...DEFAULTS, ...(await chrome.storage.sync.get(DEFAULTS)) };
+  const displays = await getDisplays();
   enabledEl.checked = settings.enabled;
-  sourceEl.value = settings.source;
-  siteUrlEl.value = settings.siteUrl;
+  renderDisplays(displays, settings.displayIds);
   flightKeyEl.value = settings.flightKey;
   exitKeyEl.value = settings.exitKey || settings.flightKey;
   idleMinutesEl.value = String(settings.idleMinutes);
   idleMinutesLabel.textContent = formatIdleLabel(settings.idleMinutes);
   closeOnActiveEl.checked = settings.closeOnActive;
   restoreWindowStateEl.checked = settings.restoreWindowState;
-  syncSourceFields();
 }
-
-sourceEl.addEventListener("change", syncSourceFields);
 
 idleMinutesEl.addEventListener("input", () => {
   idleMinutesLabel.textContent = formatIdleLabel(idleMinutesEl.value);
@@ -61,10 +110,17 @@ idleMinutesEl.addEventListener("input", () => {
 
 form.addEventListener("submit", async (e) => {
   e.preventDefault();
+  const displays = selectedDisplayIds();
+  const displayInputs = displayListEl.querySelectorAll('input[name="displayIds"]');
+  if (displayInputs.length > 0 && displays.length === 0) {
+    setStatus("Select at least one display.", false);
+    return;
+  }
   await chrome.storage.sync.set({
     enabled: enabledEl.checked,
-    source: sourceEl.value,
-    siteUrl: siteUrlEl.value.trim(),
+    source: DEFAULTS.source,
+    siteUrl: DEFAULTS.siteUrl,
+    displayIds: displays,
     flightKey: flightKeyEl.value,
     exitKey: exitKeyEl.value,
     idleMinutes: Number(idleMinutesEl.value),
@@ -80,7 +136,11 @@ previewBtn.addEventListener("click", async () => {
     const result = await chrome.runtime.sendMessage({ type: "preview" });
     if (result?.ok) {
       setStatus(
-        [`Opened in ${result.state ?? "fullscreen"} mode.`, result.url ?? ""]
+        [
+          `Opened in ${result.state ?? "fullscreen"} mode.`,
+          result.displays?.length ? `Displays: ${result.displays.join(", ")}` : "",
+          result.warning ?? "",
+        ]
           .filter(Boolean)
           .join("\n"),
       );

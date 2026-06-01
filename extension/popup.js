@@ -15,13 +15,12 @@ function formatStatus(status) {
 
   const lines = [
     status.enabled ? "Enabled" : "Disabled",
-    `Source: ${status.source === "builtin" ? "Built-in" : "PlanetsOOO"}`,
     `Idle: ${formatIdleLabel(status.idleMinutes)}`,
+    `Displays: ${status.displayIds?.length || 1}`,
     status.running ? "Screensaver running" : "Waiting for idle…",
   ];
 
-  if (status.source === "planets" && status.siteUrl) {
-    lines.push(status.siteUrl);
+  if (status.siteUrl) {
     if (status.flightKey) lines.push(`Flight: ${status.flightKey}`);
     if (status.exitKey) lines.push(`Exit: ${status.exitKey}`);
     if (status.flightMode) lines.push("Flight mode active");
@@ -29,9 +28,9 @@ function formatStatus(status) {
 
   const last = status.lastRun;
   if (last?.ok) {
-    const source = last.source === "builtin" ? "built-in" : "planets";
-    lines.push(`Last: ${last.state ?? "fullscreen"} (${source})`);
-    if (last.url) lines.push(last.url);
+    lines.push(`Last: ${last.state ?? "fullscreen"}`);
+    if (last.displays?.length) lines.push(last.displays.join(", "));
+    if (last.warning) lines.push(last.warning);
   } else if (last?.error) {
     lines.push(`Last error: ${last.error}`);
   }
