@@ -69,22 +69,46 @@
             <option value="Backquote">` (backtick)</option>
             <option value="Semicolon">; (semicolon)</option>
             <option value="BracketLeft">[ (left bracket)</option>
+            <option value="BracketRight">] (right bracket)</option>
             <option value="Backslash">\ (backslash)</option>
+            <option value="Quote">' (quote)</option>
+            <option value="Comma">, (comma)</option>
+            <option value="Period">. (period)</option>
+            <option value="Slash">/ (slash)</option>
+            <option value="Minus">- (minus)</option>
+            <option value="Equal">= (equals)</option>
+            <option value="Digit0">0</option>
+            <option value="Digit9">9</option>
             <option value="F12">F12</option>
           </select>
           <small>
-            Passed to PlanetsOOO as <code>flightKey</code>. Leave close-on-active
-            off if you want this key to enter flight instead of closing.
+            Before flight mode, this is the only user input that will not close
+            the screensaver.
           </small>
         </label>
 
         <label class="field">
-          <span>Exit PlanetsOOO screensaver</span>
-          <select id="exitGesture" name="exitGesture">
-            <option value="contextmenu">Right-click</option>
-            <option value="middleclick">Middle-click</option>
+          <span>Exit flight mode / screensaver</span>
+          <select id="exitKey" name="exitKey">
+            <option value="Backquote">` (backtick)</option>
+            <option value="Semicolon">; (semicolon)</option>
+            <option value="BracketLeft">[ (left bracket)</option>
+            <option value="BracketRight">] (right bracket)</option>
+            <option value="Backslash">\ (backslash)</option>
+            <option value="Quote">' (quote)</option>
+            <option value="Comma">, (comma)</option>
+            <option value="Period">. (period)</option>
+            <option value="Slash">/ (slash)</option>
+            <option value="Minus">- (minus)</option>
+            <option value="Equal">= (equals)</option>
+            <option value="Digit0">0</option>
+            <option value="Digit9">9</option>
+            <option value="F12">F12</option>
           </select>
-          <small>Passed to PlanetsOOO as <code>exit</code>.</small>
+          <small>
+            Select the same key as flight mode if you want one key to enter
+            flight, then exit on the next press.
+          </small>
         </label>
 
         <label class="row">

@@ -10,7 +10,8 @@ import { activateScreensaverScenicTour } from "@/lib/screensaverScenic";
 import { useScreensaverMode } from "@/hooks/useScreensaverMode";
 
 function requestCanvasPointerLock(): void {
-  const canvas = document.querySelector("canvas");
+  const canvas = document.querySelector("canvas") as HTMLCanvasElement | null;
+  canvas?.focus?.({ preventScroll: true });
   canvas?.requestPointerLock?.();
 }
 
@@ -28,6 +29,7 @@ export function ScreensaverBootstrap() {
   const flightEnteredRef = useRef(false);
 
   const startScenicTour = useCallback(() => {
+    if (flightEnteredRef.current) return;
     idleOrbitState.active = false;
     dismissInfo();
     setMenuOpen(false);
@@ -46,6 +48,7 @@ export function ScreensaverBootstrap() {
     if (!screensaver) return;
 
     const retry = window.setInterval(() => {
+      if (flightEnteredRef.current) return;
       if (discoveryAutopilotState.active && discoveryAutopilotActive) return;
       startScenicTour();
     }, 800);
@@ -64,6 +67,7 @@ export function ScreensaverBootstrap() {
     const enterFlight = () => {
       if (flightEnteredRef.current) return;
       flightEnteredRef.current = true;
+      idleOrbitState.active = false;
       setDiscoveryAutopilotActive(false);
       setNavigationActive(true);
       requestCanvasPointerLock();
@@ -77,19 +81,33 @@ export function ScreensaverBootstrap() {
     };
 
     const onKeyDown = (e: KeyboardEvent) => {
-      if (e.code !== config.enterFlightKey || e.metaKey || e.ctrlKey || e.altKey) {
+      const modified = e.metaKey || e.ctrlKey || e.altKey;
+
+      if (!flightEnteredRef.current) {
+        if (e.code === config.enterFlightKey && !modified) {
+          if (e.repeat) return;
+          e.preventDefault();
+          e.stopImmediatePropagation();
+          enterFlight();
+          return;
+        }
+
         e.preventDefault();
         e.stopImmediatePropagation();
         exitScreensaver();
         return;
       }
-      if (e.repeat) return;
-      e.preventDefault();
-      e.stopImmediatePropagation();
-      enterFlight();
+
+      if (e.code === config.exitKey && !modified) {
+        e.preventDefault();
+        e.stopImmediatePropagation();
+        if (e.repeat) return;
+        exitScreensaver();
+      }
     };
 
     const onPointerExit = (e: MouseEvent | PointerEvent) => {
+      if (flightEnteredRef.current) return;
       e.preventDefault();
       e.stopImmediatePropagation();
       exitScreensaver();
@@ -111,7 +129,7 @@ export function ScreensaverBootstrap() {
   }, [
     screensaver,
     config.enterFlightKey,
-    config.exitGesture,
+    config.exitKey,
     setDiscoveryAutopilotActive,
     setNavigationActive,
   ]);

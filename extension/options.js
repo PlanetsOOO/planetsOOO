@@ -4,7 +4,7 @@ const DEFAULTS = {
   source: "planets",
   siteUrl: "https://www.planets.ooo/",
   flightKey: "Backquote",
-  exitGesture: "contextmenu",
+  exitKey: "Backquote",
   closeOnActive: false,
   restoreWindowState: true,
 };
@@ -15,7 +15,7 @@ const sourceEl = document.getElementById("source");
 const siteUrlEl = document.getElementById("siteUrl");
 const siteUrlFieldEl = document.getElementById("siteUrlField");
 const flightKeyEl = document.getElementById("flightKey");
-const exitGestureEl = document.getElementById("exitGesture");
+const exitKeyEl = document.getElementById("exitKey");
 const idleMinutesEl = document.getElementById("idleMinutes");
 const idleMinutesLabel = document.getElementById("idleMinutesLabel");
 const closeOnActiveEl = document.getElementById("closeOnActive");
@@ -45,7 +45,7 @@ async function loadSettings() {
   sourceEl.value = settings.source;
   siteUrlEl.value = settings.siteUrl;
   flightKeyEl.value = settings.flightKey;
-  exitGestureEl.value = settings.exitGesture;
+  exitKeyEl.value = settings.exitKey || settings.flightKey;
   idleMinutesEl.value = String(settings.idleMinutes);
   idleMinutesLabel.textContent = formatIdleLabel(settings.idleMinutes);
   closeOnActiveEl.checked = settings.closeOnActive;
@@ -66,7 +66,7 @@ form.addEventListener("submit", async (e) => {
     source: sourceEl.value,
     siteUrl: siteUrlEl.value.trim(),
     flightKey: flightKeyEl.value,
-    exitGesture: exitGestureEl.value,
+    exitKey: exitKeyEl.value,
     idleMinutes: Number(idleMinutesEl.value),
     closeOnActive: closeOnActiveEl.checked,
     restoreWindowState: restoreWindowStateEl.checked,

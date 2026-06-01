@@ -4,7 +4,7 @@ const DEFAULTS = {
   source: "planets",
   siteUrl: "https://www.planets.ooo/",
   flightKey: "Backquote",
-  exitGesture: "contextmenu",
+  exitKey: "Backquote",
   closeOnActive: false,
   restoreWindowState: true,
 };
@@ -13,6 +13,13 @@ let screensaverTabId = null;
 let screensaverWindowId = null;
 let previousWindowState = "normal";
 let fullscreenRetryTimer = null;
+let fullscreenRecoveryTimer = null;
+let lastFullscreenRequestAt = 0;
+let screensaverFlightMode = false;
+
+const FULLSCREEN_CHECK_DELAY_MS = 3200;
+const FULLSCREEN_RECOVERY_DELAY_MS = 450;
+const FULLSCREEN_REQUEST_COOLDOWN_MS = 2500;
 
 function promisifyChrome(fn, ...args) {
   return new Promise((resolve, reject) => {
@@ -74,8 +81,19 @@ async function applyIdleInterval() {
   chrome.idle.setDetectionInterval(seconds);
 }
 
-async function requestWindowFullscreen(windowId) {
-  await windowsUpdate(windowId, { focused: true });
+async function requestWindowFullscreen(windowId, { focus = false } = {}) {
+  const before = await windowsGet(windowId);
+  if (before?.state === "fullscreen") return "fullscreen";
+
+  const now = Date.now();
+  if (now - lastFullscreenRequestAt < FULLSCREEN_REQUEST_COOLDOWN_MS) {
+    return before?.state || "unknown";
+  }
+  lastFullscreenRequestAt = now;
+
+  if (focus && !before?.focused) {
+    await windowsUpdate(windowId, { focused: true });
+  }
   await windowsUpdate(windowId, { state: "fullscreen" });
   const updated = await windowsGet(windowId);
   return updated.state || "fullscreen";
@@ -85,6 +103,10 @@ function clearFullscreenRetry() {
   if (fullscreenRetryTimer != null) {
     clearTimeout(fullscreenRetryTimer);
     fullscreenRetryTimer = null;
+  }
+  if (fullscreenRecoveryTimer != null) {
+    clearTimeout(fullscreenRecoveryTimer);
+    fullscreenRecoveryTimer = null;
   }
 }
 
@@ -97,20 +119,37 @@ function scheduleFullscreenCheck(windowId) {
       if (win?.state === "fullscreen") return;
       return requestWindowFullscreen(windowId);
     }).catch(() => {});
-  }, 1800);
+  }, FULLSCREEN_CHECK_DELAY_MS);
 }
 
 async function enterScreensaverFullscreen(windowId) {
-  const state = await requestWindowFullscreen(windowId);
+  const state = await requestWindowFullscreen(windowId, { focus: true });
   if (state !== "fullscreen") {
     scheduleFullscreenCheck(windowId);
   }
   return state;
 }
 
+function scheduleFullscreenRecovery(windowId) {
+  if (windowId == null || windowId !== screensaverWindowId) return;
+  if (fullscreenRecoveryTimer != null) return;
+
+  fullscreenRecoveryTimer = setTimeout(() => {
+    fullscreenRecoveryTimer = null;
+    if (windowId !== screensaverWindowId) return;
+
+    void windowsGet(windowId).then((win) => {
+      if (!win || win.state === "fullscreen") return;
+      return requestWindowFullscreen(windowId);
+    }).catch(() => {});
+  }, FULLSCREEN_RECOVERY_DELAY_MS);
+}
+
 function clearScreensaverTracking() {
   screensaverTabId = null;
   screensaverWindowId = null;
+  screensaverFlightMode = false;
+  lastFullscreenRequestAt = 0;
   clearFullscreenRetry();
 }
 
@@ -144,13 +183,13 @@ function buildPlanetsUrl(settings) {
     const url = new URL(base.includes("://") ? base : `https://${base}`);
     url.searchParams.set("screensaver", "1");
     url.searchParams.set("flightKey", settings.flightKey || DEFAULTS.flightKey);
-    url.searchParams.set("exit", settings.exitGesture || DEFAULTS.exitGesture);
+    url.searchParams.set("exitKey", settings.exitKey || settings.flightKey || DEFAULTS.exitKey);
     return url.toString();
   } catch {
     const url = new URL(DEFAULTS.siteUrl);
     url.searchParams.set("screensaver", "1");
     url.searchParams.set("flightKey", DEFAULTS.flightKey);
-    url.searchParams.set("exit", DEFAULTS.exitGesture);
+    url.searchParams.set("exitKey", DEFAULTS.exitKey);
     return url.toString();
   }
 }
@@ -203,6 +242,7 @@ async function openScreensaver({ preview = false } = {}) {
   try {
     if (targetWindow?.id != null) {
       screensaverWindowId = targetWindow.id;
+      screensaverFlightMode = false;
       previousWindowState = targetWindow.state || "normal";
 
       const tab = await tabsCreate({
@@ -237,6 +277,7 @@ async function openScreensaver({ preview = false } = {}) {
 
     screensaverWindowId = win.id ?? null;
     screensaverTabId = win.tabs?.[0]?.id ?? null;
+    screensaverFlightMode = false;
     previousWindowState = "normal";
     if (screensaverWindowId != null) {
       scheduleFullscreenCheck(screensaverWindowId);
@@ -299,7 +340,7 @@ chrome.idle.onStateChanged.addListener((state) => {
 
   if (state === "active") {
     void getSettings().then((settings) => {
-      if (settings.closeOnActive) void closeScreensaver();
+      if (settings.closeOnActive && !screensaverFlightMode) void closeScreensaver();
     });
   }
 });
@@ -313,8 +354,9 @@ chrome.tabs.onRemoved.addListener((tabId) => {
 chrome.tabs.onUpdated.addListener((tabId, changeInfo) => {
   if (tabId !== screensaverTabId) return;
   if (changeInfo.status !== "complete") return;
-  if (screensaverWindowId == null) return;
-  scheduleFullscreenCheck(screensaverWindowId);
+  // Do not re-request fullscreen on tab completion. The PlanetsOOO app can
+  // update during scenic leg changes, and redundant fullscreen requests make
+  // Chrome/macOS flash the fullscreen transition and Esc notice again.
 });
 
 chrome.windows.onRemoved.addListener((windowId) => {
@@ -322,6 +364,14 @@ chrome.windows.onRemoved.addListener((windowId) => {
     clearScreensaverTracking();
   }
 });
+
+if (chrome.windows.onBoundsChanged) {
+  chrome.windows.onBoundsChanged.addListener((win) => {
+    if (win.id !== screensaverWindowId) return;
+    if (win.state === "fullscreen") return;
+    scheduleFullscreenRecovery(win.id);
+  });
+}
 
 chrome.runtime.onInstalled.addListener(() => {
   void applyIdleInterval();
@@ -352,6 +402,14 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
     return true;
   }
 
+  if (message?.type === "screensaver-flight-entered") {
+    if (_sender?.tab?.id === screensaverTabId) {
+      screensaverFlightMode = true;
+    }
+    sendResponse({ ok: true });
+    return false;
+  }
+
   if (message?.type === "status") {
     Promise.all([getSettings(), chrome.storage.local.get("lastRun")]).then(
       ([settings, local]) => {
@@ -362,8 +420,9 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
           source: settings.source,
           siteUrl: settings.siteUrl,
           flightKey: settings.flightKey,
-          exitGesture: settings.exitGesture,
+          exitKey: settings.exitKey,
           running: screensaverTabId != null,
+          flightMode: screensaverFlightMode,
           lastRun: local.lastRun ?? null,
         });
       },

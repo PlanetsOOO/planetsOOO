@@ -8,7 +8,10 @@ animation test page.
 - Uses `chrome.idle` to detect inactivity.
 - Opens the PlanetsOOO scenic tour (`?screensaver=1`) or `screensaver.html`.
 - Requests window fullscreen with `chrome.windows.update(windowId, { state: "fullscreen" })`.
-- Closes on activity when enabled. The built-in page also closes on right-click / Escape.
+- In PlanetsOOO mode, any input closes before flight except the configured
+  flight key. After flight starts, the configured exit key closes the tab.
+- Flight mode input is treated as intentional control input, not activity that
+  closes the screensaver.
 - Idle timeout is configurable in Options.
 
 ## Local Install
@@ -30,6 +33,9 @@ animation test page.
 ## Notes
 
 Chrome window fullscreen is controlled by the browser/OS. On macOS, toolbar visibility can still be affected by Chrome's fullscreen toolbar settings.
+Chrome's fullscreen notice, including the Esc hint, is browser-owned UI and
+cannot be hidden by an extension. The extension avoids unnecessary repeat
+fullscreen requests so that notice is shown as little as Chrome allows.
 
 For local PlanetsOOO testing, set the URL to `http://localhost:3000/` and make
 sure one Next dev server is running. For production, use

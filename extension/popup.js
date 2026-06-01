@@ -23,9 +23,8 @@ function formatStatus(status) {
   if (status.source === "planets" && status.siteUrl) {
     lines.push(status.siteUrl);
     if (status.flightKey) lines.push(`Flight: ${status.flightKey}`);
-    if (status.exitGesture) {
-      lines.push(`Exit: ${status.exitGesture === "middleclick" ? "middle-click" : "right-click"}`);
-    }
+    if (status.exitKey) lines.push(`Exit: ${status.exitKey}`);
+    if (status.flightMode) lines.push("Flight mode active");
   }
 
   const last = status.lastRun;

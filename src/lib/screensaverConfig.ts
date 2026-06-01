@@ -1,13 +1,13 @@
-export type ScreensaverExitGesture = "contextmenu" | "middleclick";
-
 export interface ScreensaverConfig {
   active: boolean;
   /** KeyboardEvent.code for entering flight from scenic autopilot. */
   enterFlightKey: string;
-  exitGesture: ScreensaverExitGesture;
+  /** KeyboardEvent.code for leaving flight/screensaver. */
+  exitKey: string;
 }
 
 const DEFAULT_ENTER_FLIGHT_KEY = "Backquote";
+const DEFAULT_EXIT_KEY = DEFAULT_ENTER_FLIGHT_KEY;
 
 /** Synchronous check — use on first client render (extension adds ?screensaver=1). */
 export function isScreensaverMode(): boolean {
@@ -16,17 +16,13 @@ export function isScreensaverMode(): boolean {
   return value === "1" || value === "true";
 }
 
-function readExitGesture(raw: string | null): ScreensaverExitGesture {
-  return raw === "middleclick" ? "middleclick" : "contextmenu";
-}
-
-/** Parse ?screensaver=1 URL params (extension appends flightKey / exit). */
+/** Parse ?screensaver=1 URL params (extension appends flightKey / exitKey). */
 export function readScreensaverConfig(): ScreensaverConfig {
   if (typeof window === "undefined") {
     return {
       active: false,
       enterFlightKey: DEFAULT_ENTER_FLIGHT_KEY,
-      exitGesture: "contextmenu",
+      exitKey: DEFAULT_EXIT_KEY,
     };
   }
 
@@ -34,7 +30,7 @@ export function readScreensaverConfig(): ScreensaverConfig {
   return {
     active: isScreensaverMode(),
     enterFlightKey: params.get("flightKey")?.trim() || DEFAULT_ENTER_FLIGHT_KEY,
-    exitGesture: readExitGesture(params.get("exit")),
+    exitKey: params.get("exitKey")?.trim() || params.get("flightKey")?.trim() || DEFAULT_EXIT_KEY,
   };
 }
 
@@ -42,11 +38,16 @@ export const SCREENSAVER_FLIGHT_KEY_OPTIONS = [
   { code: "Backquote", label: "` (backtick)" },
   { code: "Semicolon", label: "; (semicolon)" },
   { code: "BracketLeft", label: "[ (left bracket)" },
+  { code: "BracketRight", label: "] (right bracket)" },
   { code: "Backslash", label: "\\ (backslash)" },
+  { code: "Quote", label: "' (quote)" },
+  { code: "Comma", label: ", (comma)" },
+  { code: "Period", label: ". (period)" },
+  { code: "Slash", label: "/ (slash)" },
+  { code: "Minus", label: "- (minus)" },
+  { code: "Equal", label: "= (equals)" },
+  { code: "Digit0", label: "0" },
+  { code: "Digit9", label: "9" },
   { code: "F12", label: "F12" },
 ] as const;
 
-export const SCREENSAVER_EXIT_OPTIONS = [
-  { value: "contextmenu", label: "Right-click" },
-  { value: "middleclick", label: "Middle-click" },
-] as const;
