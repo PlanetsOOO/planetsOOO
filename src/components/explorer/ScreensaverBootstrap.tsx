@@ -1,8 +1,12 @@
 "use client";
 
 import { useCallback, useEffect, useLayoutEffect, useRef } from "react";
+import type { NavTargetId } from "@/data/navigationTargets";
 import { useExplorer } from "@/context/ExplorerContext";
-import { discoveryAutopilotState } from "@/lib/discoveryAutopilot";
+import {
+  beginDiscoveryOrbitPhase,
+  discoveryAutopilotState,
+} from "@/lib/discoveryAutopilot";
 import { idleOrbitState } from "@/lib/idleOrbitState";
 import { readScreensaverConfig } from "@/lib/screensaverConfig";
 import { activateScreensaverPresentation } from "@/lib/screensaverPresentation";
@@ -32,6 +36,7 @@ export function ScreensaverBootstrap() {
   } = useExplorer();
   const flightEnteredRef = useRef(false);
   const flightActiveRef = useRef(false);
+  const returnTargetRef = useRef<NavTargetId | null>(null);
   const showLabelsRef = useRef(showLabels);
   const flightIdleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -91,6 +96,18 @@ export function ScreensaverBootstrap() {
       if (document.pointerLockElement) {
         document.exitPointerLock();
       }
+
+      const returnTarget = returnTargetRef.current;
+      if (returnTarget) {
+        discoveryAutopilotState.active = true;
+        discoveryAutopilotState.currentTargetId = returnTarget;
+        discoveryAutopilotState.queuedTargetId = null;
+        discoveryAutopilotState.searchFocusLocked = false;
+        beginDiscoveryOrbitPhase();
+        setDiscoveryAutopilotActive(true);
+        return;
+      }
+
       startScenicTour(true);
     };
 
@@ -103,8 +120,15 @@ export function ScreensaverBootstrap() {
       );
     };
 
+    const toggleLabels = () => {
+      const next = !showLabelsRef.current;
+      showLabelsRef.current = next;
+      setShowLabels(next);
+    };
+
     const enterFlight = () => {
       if (flightActiveRef.current) return;
+      returnTargetRef.current = discoveryAutopilotState.currentTargetId;
       flightEnteredRef.current = true;
       flightActiveRef.current = true;
       idleOrbitState.active = false;
@@ -126,6 +150,13 @@ export function ScreensaverBootstrap() {
       const modified = e.metaKey || e.ctrlKey || e.altKey;
 
       if (!flightEnteredRef.current) {
+        if (e.key.toLowerCase() === "l" && !modified) {
+          e.preventDefault();
+          e.stopImmediatePropagation();
+          toggleLabels();
+          return;
+        }
+
         if (e.code === config.enterFlightKey && !modified) {
           if (e.repeat) return;
           e.preventDefault();
@@ -159,9 +190,7 @@ export function ScreensaverBootstrap() {
       if (e.key.toLowerCase() === "l" && !modified) {
         e.preventDefault();
         e.stopImmediatePropagation();
-        const next = !showLabelsRef.current;
-        showLabelsRef.current = next;
-        setShowLabels(next);
+        toggleLabels();
         markFlightActivity();
         return;
       }

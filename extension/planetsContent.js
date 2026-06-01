@@ -38,6 +38,10 @@ if (isScreensaverPage()) {
       (event) => {
         const modified = event.metaKey || event.ctrlKey || event.altKey;
 
+        if (event.key?.toLowerCase() === "l" && !modified) {
+          return;
+        }
+
         if (!flightMode && event.code === flightKey && !modified) {
           flightMode = true;
           notifyFlightModeEntered();
