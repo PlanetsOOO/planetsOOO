@@ -37,7 +37,7 @@ export function ScreensaverBootstrap() {
   const flightActiveRef = useRef(false);
   const returnTargetRef = useRef<NavTargetId | null>(null);
   const showLabelsRef = useRef(showLabels);
-  const flightIdleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const flightIdleTimerRef = useRef<number | null>(null);
 
   useEffect(() => {
     showLabelsRef.current = showLabels;

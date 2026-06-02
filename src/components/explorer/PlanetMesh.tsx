@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import { useFrame, useThree } from "@react-three/fiber";
 import { useTexture } from "@react-three/drei";
 import * as THREE from "three";
@@ -59,7 +59,6 @@ export function PlanetMesh({ config }: PlanetMeshProps) {
   const cloudRef = useRef<THREE.Mesh>(null);
   const impostorRef = useRef<THREE.Points>(null);
   const bodyMatRef = useRef<THREE.MeshStandardMaterial>(null);
-  const [hovered, setHovered] = useState(false);
   const { selectedId, infoOpen, showLabels, openPlanetInfo, autoNavigating, navTargetId, navigationActive } =
     useExplorer();
   const isNavTarget =
@@ -67,7 +66,6 @@ export function PlanetMesh({ config }: PlanetMeshProps) {
   const isReticleTarget =
     navigationActive && flightReticleState.targetId === config.id;
   const isHighlighted =
-    hovered ||
     (infoOpen && selectedId === config.id) ||
     isNavTarget ||
     isReticleTarget;
@@ -332,12 +330,6 @@ export function PlanetMesh({ config }: PlanetMeshProps) {
         visible={false}
         frustumCulled={false}
         onDoubleClick={handleDoubleClick}
-        onPointerOver={(e) => {
-          if (navigationActive) return;
-          e.stopPropagation();
-          setHovered(true);
-        }}
-        onPointerOut={() => setHovered(false)}
       >
         <bufferGeometry>
           <bufferAttribute attach="attributes-position" args={[new Float32Array([0, 0, 0]), 3]} />
@@ -351,12 +343,6 @@ export function PlanetMesh({ config }: PlanetMeshProps) {
           castShadow={!isSun}
           receiveShadow={!isSun}
           onDoubleClick={handleDoubleClick}
-          onPointerOver={(e) => {
-            if (navigationActive) return;
-            e.stopPropagation();
-            setHovered(true);
-          }}
-          onPointerOut={() => setHovered(false)}
         >
         <sphereGeometry args={[config.radius, 16, 16]} />
         <meshStandardMaterial

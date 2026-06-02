@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import { useFrame, useThree } from "@react-three/fiber";
 import { useTexture } from "@react-three/drei";
 import * as THREE from "three";
@@ -39,7 +39,6 @@ export function MoonMesh() {
   const bodyRef = useRef<THREE.Mesh>(null);
   const impostorRef = useRef<THREE.Points>(null);
   const visualScaleRef = useRef<THREE.Group>(null);
-  const [hovered, setHovered] = useState(false);
   const {
     showLabels,
     autoNavigating,
@@ -50,7 +49,7 @@ export function MoonMesh() {
   const isNavTarget = autoNavigating && navTargetId === "moon";
   const isReticleTarget =
     navigationActive && flightReticleState.targetId === "moon";
-  const isHighlighted = hovered || isNavTarget || isReticleTarget;
+  const isHighlighted = isNavTarget || isReticleTarget;
   const { gl, camera, size } = useThree();
 
   const texture = useTexture(MOON.texture);
@@ -153,12 +152,6 @@ export function MoonMesh() {
           material={bodyMat}
           castShadow
           receiveShadow
-          onPointerOver={(e) => {
-            if (navigationActive) return;
-            e.stopPropagation();
-            setHovered(true);
-          }}
-          onPointerOut={() => setHovered(false)}
         >
           <sphereGeometry args={[MOON.radius, 16, 16]} />
         </mesh>
