@@ -163,7 +163,7 @@ export function MoonMesh() {
           <sphereGeometry args={[MOON.radius, 16, 16]} />
         </mesh>
 
-        {(showLabels || (hovered && !navigationActive)) && (
+        {showLabels && (
           <BodyLabel
             id="moon"
             navTargetId="moon"

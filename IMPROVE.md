@@ -98,6 +98,10 @@ Keep the last ~10 entries. Delete rows that no longer teach you anything.
 | 2026-05-31 | Label key and scenic return felt wrong in screensaver | Let L pass through; resume scenic in-place from current POV | Check L toggle and 15s idle return |
 | 2026-06-01 | Flight idle return could be reset by pointer-lock mouse noise | Ignore tiny mousemove events for screensaver flight idle | Check hands-off return after 15s |
 | 2026-06-01 | Flight idle scenic return forced an incomplete orbit | Return through scenic transit from current POV | Check same-window transit after 15s |
+| 2026-06-01 | Sun scenic orbit was too close and labels were ambiguous | Farther oversized-body standoff; labels only in screensaver flight | Check Sun focus and L in flight |
+| 2026-06-01 | Scenic transition could appear as a new screensaver page | Rehydrate existing screensaver tabs before opening new ones | Check object transition without duplicate page |
+| 2026-06-01 | Planet hover caused subtle magnification | Removed hover scale; kept hover highlighting | Check cursor hover on bodies |
+| 2026-06-02 | Moon had hover-only label in screensaver | Use shared label toggle for Moon and screensaver L key | Check L shows all body labels |
 | | | | |
 
 ---

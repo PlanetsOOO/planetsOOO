@@ -27,7 +27,13 @@ function notifyFlightModeEntered() {
   void chrome.runtime.sendMessage({ type: "screensaver-flight-entered" });
 }
 
+function notifyScreensaverReady() {
+  void chrome.runtime.sendMessage({ type: "screensaver-page-ready" });
+}
+
 if (isScreensaverPage()) {
+  notifyScreensaverReady();
+
   chrome.storage.sync.get(DEFAULTS, (settings) => {
     const flightKey = configuredFlightKey(settings);
     const exitKey = configuredExitKey(settings, flightKey);

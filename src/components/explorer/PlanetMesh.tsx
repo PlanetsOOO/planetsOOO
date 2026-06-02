@@ -71,8 +71,6 @@ export function PlanetMesh({ config }: PlanetMeshProps) {
     (infoOpen && selectedId === config.id) ||
     isNavTarget ||
     isReticleTarget;
-  const applyHoverScale =
-    !navigationActive && (hovered || (infoOpen && selectedId === config.id));
   const isSun = config.id === "sun";
   const isEarth = config.id === "earth";
   const { gl, camera, size } = useThree();
@@ -231,10 +229,8 @@ export function PlanetMesh({ config }: PlanetMeshProps) {
       applyLod(segments, level);
     }
 
-    const hoverScale = applyHoverScale ? 1.04 : 1;
-    const meshScale = hoverScale * sizeScale;
     if (visualScaleRef.current) {
-      visualScaleRef.current.scale.setScalar(meshScale);
+      visualScaleRef.current.scale.setScalar(sizeScale);
     }
 
     if (bodyMatRef.current && approachTierMaps.current.length === 3) {

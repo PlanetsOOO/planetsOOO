@@ -61,6 +61,10 @@ function tabsRemove(tabId) {
   return promisifyChrome(chrome.tabs.remove, tabId);
 }
 
+function tabsQuery(queryInfo) {
+  return promisifyChrome(chrome.tabs.query, queryInfo);
+}
+
 function displaysGetInfo() {
   if (!chrome.system?.display?.getInfo) return Promise.resolve([]);
   return new Promise((resolve, reject) => {
@@ -173,6 +177,23 @@ function isScreensaverTabId(tabId) {
   return screensaverInstances.some((instance) => instance.tabId === tabId);
 }
 
+function isScreensaverUrl(url) {
+  if (!url) return false;
+  try {
+    const parsed = new URL(url);
+    const screensaver = parsed.searchParams.get("screensaver");
+    return (
+      (parsed.hostname === "www.planets.ooo" ||
+        parsed.hostname === "planets.ooo" ||
+        parsed.hostname === "localhost" ||
+        parsed.hostname === "127.0.0.1") &&
+      (screensaver === "1" || screensaver === "true")
+    );
+  } catch {
+    return false;
+  }
+}
+
 function removeScreensaverInstance(match) {
   screensaverInstances = screensaverInstances.filter((instance) => {
     if (match.tabId != null && instance.tabId === match.tabId) return false;
@@ -184,6 +205,26 @@ function removeScreensaverInstance(match) {
   if (screensaverInstances.length === 0) {
     clearScreensaverTracking();
   }
+}
+
+async function restoreExistingScreensaverInstances() {
+  const tabs = await tabsQuery({});
+  const instances = tabs
+    .filter((tab) => tab.id != null && tab.windowId != null && isScreensaverUrl(tab.url))
+    .map((tab, index) => ({
+      tabId: tab.id,
+      windowId: tab.windowId,
+      displayId: `existing-${tab.windowId}`,
+      displayName: index === 0 ? "Existing screensaver" : `Existing screensaver ${index + 1}`,
+    }));
+
+  if (instances.length === 0) return false;
+
+  setScreensaverInstances(instances);
+  for (const instance of instances) {
+    await enterScreensaverFullscreen(instance.windowId);
+  }
+  return true;
 }
 
 function clearScreensaverTracking() {
@@ -275,7 +316,9 @@ async function getTargetWindow() {
 }
 
 async function focusExistingScreensaver() {
-  if (screensaverInstances.length === 0) return false;
+  if (screensaverInstances.length === 0) {
+    return restoreExistingScreensaverInstances();
+  }
 
   try {
     await Promise.all(
@@ -287,7 +330,7 @@ async function focusExistingScreensaver() {
     return true;
   } catch {
     clearScreensaverTracking();
-    return false;
+    return restoreExistingScreensaverInstances();
   }
 }
 
@@ -522,6 +565,24 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
   if (message?.type === "screensaver-flight-entered") {
     if (isScreensaverTabId(_sender?.tab?.id)) {
       screensaverFlightMode = true;
+    }
+    sendResponse({ ok: true });
+    return false;
+  }
+
+  if (message?.type === "screensaver-page-ready") {
+    const tabId = _sender?.tab?.id;
+    const windowId = _sender?.tab?.windowId;
+    if (tabId != null && windowId != null && !isScreensaverTabId(tabId)) {
+      setScreensaverInstances([
+        ...screensaverInstances,
+        {
+          tabId,
+          windowId,
+          displayId: `registered-${windowId}`,
+          displayName: "Registered screensaver",
+        },
+      ]);
     }
     sendResponse({ ok: true });
     return false;

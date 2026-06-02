@@ -95,6 +95,8 @@ export function ScreensaverBootstrap() {
       if (document.pointerLockElement) {
         document.exitPointerLock();
       }
+      showLabelsRef.current = false;
+      setShowLabels(false);
 
       const returnTarget = returnTargetRef.current;
       returnToDiscoveryScenic(returnTarget);

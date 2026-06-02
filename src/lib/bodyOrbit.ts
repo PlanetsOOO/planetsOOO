@@ -29,6 +29,9 @@ const _offset = new THREE.Vector3();
 const _north = new THREE.Vector3(0, 1, 0);
 const _tangent = new THREE.Vector3();
 const _body = new THREE.Vector3();
+const OVERSIZED_BODY_RADIUS_UNITS = 200;
+const DEFAULT_ORBIT_RADIUS_SCALE = 6;
+const OVERSIZED_BODY_ORBIT_RADIUS_SCALE = 14;
 
 type Vec3Like = { x: number; y: number; z: number };
 
@@ -56,7 +59,11 @@ export function orbitZoneMax(bodyRadiusUnits: number): number {
 }
 
 export function defaultOrbitRadius(bodyRadiusUnits: number): number {
-  return Math.max(bodyRadiusUnits * 6, bodyRadiusUnits * 2.5 + 2);
+  const scale =
+    bodyRadiusUnits >= OVERSIZED_BODY_RADIUS_UNITS
+      ? OVERSIZED_BODY_ORBIT_RADIUS_SCALE
+      : DEFAULT_ORBIT_RADIUS_SCALE;
+  return Math.max(bodyRadiusUnits * scale, bodyRadiusUnits * 2.5 + 2);
 }
 
 export function isWithinOrbitZone(

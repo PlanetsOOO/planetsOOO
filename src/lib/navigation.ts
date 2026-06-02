@@ -6,6 +6,8 @@ import * as THREE from "three";
 
 /** Default showcase standoff — ~6 body radii (matches Earth idle orbit). */
 export const ORBIT_VIEW_RADIUS_SCALE = 6;
+const OVERSIZED_BODY_RADIUS_UNITS = 200;
+const OVERSIZED_BODY_ORBIT_VIEW_RADIUS_SCALE = 14;
 /** Auto lightspeed when farther than this from the target (scene units). */
 export const AUTO_NAV_WARP_DISTANCE = 120;
 
@@ -16,8 +18,13 @@ const _north = new THREE.Vector3(0, 1, 0);
 const _euler = new THREE.Euler(0, 0, 0, "YXZ");
 
 function orbitStandoffUnits(config: PlanetConfig): number {
+  const radiusScale =
+    config.id === "sun" || config.radius >= OVERSIZED_BODY_RADIUS_UNITS
+      ? OVERSIZED_BODY_ORBIT_VIEW_RADIUS_SCALE
+      : ORBIT_VIEW_RADIUS_SCALE;
+
   return Math.max(
-    config.radius * ORBIT_VIEW_RADIUS_SCALE,
+    config.radius * radiusScale,
     config.radius * 2.5 + 2,
   );
 }
