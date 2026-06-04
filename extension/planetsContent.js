@@ -39,6 +39,10 @@ if (isScreensaverPage()) {
     const exitKey = configuredExitKey(settings, flightKey);
     let flightMode = false;
 
+    window.addEventListener("orbit-screensaver-flight-mode", (event) => {
+      flightMode = Boolean(event.detail?.active);
+    });
+
     window.addEventListener(
       "keydown",
       (event) => {
@@ -56,10 +60,7 @@ if (isScreensaverPage()) {
 
         if (flightMode) {
           if (event.code === exitKey && !modified) {
-            event.preventDefault();
-            event.stopImmediatePropagation();
-            if (event.repeat) return;
-            closeScreensaver();
+            return;
           }
           return;
         }

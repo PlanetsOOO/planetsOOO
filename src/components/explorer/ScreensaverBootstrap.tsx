@@ -13,6 +13,14 @@ import { useScreensaverMode } from "@/hooks/useScreensaverMode";
 const FLIGHT_IDLE_RETURN_MS = 15_000;
 const FLIGHT_IDLE_MOUSE_EPSILON = 2;
 
+function notifyScreensaverFlightMode(active: boolean): void {
+  window.dispatchEvent(
+    new CustomEvent("orbit-screensaver-flight-mode", {
+      detail: { active },
+    }),
+  );
+}
+
 function requestCanvasPointerLock(): void {
   const canvas = document.querySelector("canvas") as HTMLCanvasElement | null;
   canvas?.focus?.({ preventScroll: true });
@@ -90,6 +98,8 @@ export function ScreensaverBootstrap() {
 
     const returnToScenicTour = () => {
       flightActiveRef.current = false;
+      flightEnteredRef.current = false;
+      notifyScreensaverFlightMode(false);
       clearFlightIdleTimer();
       setNavigationActive(false);
       if (document.pointerLockElement) {
@@ -122,6 +132,7 @@ export function ScreensaverBootstrap() {
       returnTargetRef.current = discoveryAutopilotState.currentTargetId;
       flightEnteredRef.current = true;
       flightActiveRef.current = true;
+      notifyScreensaverFlightMode(true);
       idleOrbitState.active = false;
       setDiscoveryAutopilotActive(false);
       setNavigationActive(true);
@@ -141,13 +152,6 @@ export function ScreensaverBootstrap() {
       const modified = e.metaKey || e.ctrlKey || e.altKey;
 
       if (!flightEnteredRef.current) {
-        if (e.key.toLowerCase() === "l" && !modified) {
-          e.preventDefault();
-          e.stopImmediatePropagation();
-          toggleLabels();
-          return;
-        }
-
         if (e.code === config.enterFlightKey && !modified) {
           if (e.repeat) return;
           e.preventDefault();
@@ -166,7 +170,7 @@ export function ScreensaverBootstrap() {
         e.preventDefault();
         e.stopImmediatePropagation();
         if (e.repeat) return;
-        exitScreensaver();
+        returnToScenicTour();
         return;
       }
 

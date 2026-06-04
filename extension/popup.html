@@ -8,11 +8,91 @@
   <body>
     <main>
       <h1>Orbit Screensaver</h1>
-      <p id="state">Loading…</p>
+      <p id="state" class="status">Loading…</p>
+
+      <form id="settings">
+        <label class="row">
+          <input type="checkbox" id="enabled" name="enabled" />
+          <span>Enable idle screensaver</span>
+        </label>
+
+        <label class="field">
+          <span>Idle</span>
+          <div class="inline">
+            <input
+              type="range"
+              id="idleMinutes"
+              name="idleMinutes"
+              min="0.25"
+              max="60"
+              step="0.25"
+            />
+            <output id="idleMinutesLabel">5 min</output>
+          </div>
+        </label>
+
+        <fieldset class="field">
+          <span>Displays</span>
+          <div id="displayList" class="display-list">Loading displays…</div>
+        </fieldset>
+
+        <div class="grid">
+          <label class="field">
+            <span>Flight key</span>
+            <select id="flightKey" name="flightKey">
+              <option value="Backquote">`</option>
+              <option value="Semicolon">;</option>
+              <option value="BracketLeft">[</option>
+              <option value="BracketRight">]</option>
+              <option value="Backslash">\</option>
+              <option value="Quote">'</option>
+              <option value="Comma">,</option>
+              <option value="Period">.</option>
+              <option value="Slash">/</option>
+              <option value="Minus">-</option>
+              <option value="Equal">=</option>
+              <option value="Digit0">0</option>
+              <option value="Digit9">9</option>
+              <option value="F12">F12</option>
+            </select>
+          </label>
+
+          <label class="field">
+            <span>Exit flight</span>
+            <select id="exitKey" name="exitKey">
+              <option value="Backquote">`</option>
+              <option value="Semicolon">;</option>
+              <option value="BracketLeft">[</option>
+              <option value="BracketRight">]</option>
+              <option value="Backslash">\</option>
+              <option value="Quote">'</option>
+              <option value="Comma">,</option>
+              <option value="Period">.</option>
+              <option value="Slash">/</option>
+              <option value="Minus">-</option>
+              <option value="Equal">=</option>
+              <option value="Digit0">0</option>
+              <option value="Digit9">9</option>
+              <option value="F12">F12</option>
+            </select>
+          </label>
+        </div>
+
+        <label class="row">
+          <input type="checkbox" id="closeOnActive" name="closeOnActive" />
+          <span>Close when computer becomes active</span>
+        </label>
+
+        <label class="row">
+          <input type="checkbox" id="restoreWindowState" name="restoreWindowState" />
+          <span>Restore window state on close</span>
+        </label>
+      </form>
+
       <div class="actions">
+        <button type="button" id="save" class="secondary">Save</button>
         <button type="button" id="preview">Preview</button>
         <button type="button" id="close" class="secondary">Close</button>
-        <button type="button" id="options" class="secondary">Options</button>
       </div>
     </main>
     <script src="popup.js"></script>

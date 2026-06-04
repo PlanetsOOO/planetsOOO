@@ -1,9 +1,11 @@
 body {
   margin: 0;
-  width: 16rem;
+  width: 21rem;
+  max-height: 36rem;
   font-family: system-ui, sans-serif;
   background: #030508;
   color: #d4d4d8;
+  overflow: auto;
 }
 
 main {
@@ -16,16 +18,105 @@ h1 {
   font-weight: 500;
 }
 
-p {
+.status {
   margin: 0 0 0.75rem;
   font-size: 0.75rem;
   line-height: 1.4;
   color: #71717a;
+  white-space: pre-line;
+}
+
+.status[data-ok="1"] {
+  color: #38bdf8;
+}
+
+.status[data-ok="0"] {
+  color: #f87171;
+}
+
+form {
+  display: grid;
+  gap: 0.55rem;
+  margin-bottom: 0.7rem;
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-size: 0.72rem;
+  color: #a1a1aa;
+}
+
+.field {
+  display: grid;
+  gap: 0.25rem;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  font-size: 0.62rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #71717a;
+}
+
+.field select,
+.field input[type="range"] {
+  width: 100%;
+}
+
+.field select {
+  box-sizing: border-box;
+  border: 1px solid #27272a;
+  background: #09090b;
+  color: #e4e4e7;
+  border-radius: 0.35rem;
+  padding: 0.32rem 0.4rem;
+  font-size: 0.72rem;
+  text-transform: none;
+  letter-spacing: normal;
+}
+
+.inline {
+  display: grid;
+  grid-template-columns: 1fr 3.5rem;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+.inline output {
+  color: #a1a1aa;
+  font-size: 0.7rem;
+  text-transform: none;
+  letter-spacing: normal;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.5rem;
+}
+
+.display-list {
+  display: grid;
+  gap: 0.25rem;
+  max-height: 4.8rem;
+  overflow: auto;
+  text-transform: none;
+  letter-spacing: normal;
+  color: #a1a1aa;
+  font-size: 0.68rem;
+}
+
+.display-option {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
 }
 
 .actions {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: 1fr 1fr 1fr;
   gap: 0.35rem;
 }
 
@@ -41,10 +132,6 @@ button {
 
 button.secondary {
   background: transparent;
-}
-
-#options {
-  grid-column: span 2;
 }
 
 button:hover {
