@@ -104,7 +104,7 @@ Keep the last ~10 entries. Delete rows that no longer teach you anything.
 | 2026-06-02 | Moon had hover-only label in screensaver | Use shared label toggle for Moon and screensaver L key | Check L shows all body labels |
 | 2026-06-03 | Extension options were split out and flight exit closed screensaver | Moved settings into popup; exit/idle returns to scenic guard mode | Check popup settings and exit-key return |
 | 2026-06-06 | Mouse/trackpad motion should not interrupt screensaver flight | Move/wheel exits scenic only; flight treats it as activity | Check scenic exit and flight pointer controls |
-| 2026-06-07 | Screensaver depended entirely on planets.ooo availability | Packaged offline scenic fallback with online upgrade probe | Check offline preview then reconnect |
+| 2026-06-07 | Offline fallback looked unlike the scenic tour | Packaged all-planets loop with online upgrade probe | Check offline preview then reconnect |
 | | | | |
 
 ---

@@ -28,7 +28,7 @@ Chrome screensaver extension for the PlanetsOOO scenic tour.
 
 - `manifest.json` — Manifest V3 config
 - `background.js` — idle detection, fullscreen window control
-- `screensaver.html/js/css` — packaged offline scenic fallback
+- `screensaver.html/js/css` — packaged offline all-planets scenic fallback
 - `popup.html/js/css` — compact settings, preview, and close UI
 
 ## Notes
@@ -44,3 +44,6 @@ fullscreen requests so that notice is shown as little as Chrome allows.
 The publish build tries `https://www.planets.ooo/` first. If the site cannot
 be reached quickly, the extension opens its packaged offline scenic fallback
 and periodically retries the online tour so it can upgrade when connected.
+The offline fallback is a lightweight local all-planets loop; it does not yet
+bundle the full Three.js scene, NASA APIs, AI routes, or high-resolution
+textures.

@@ -13,22 +13,19 @@
       <div class="nebula"></div>
 
       <section class="scene" aria-live="polite">
-        <p class="eyebrow">Packaged Offline Scenic Mode</p>
+        <p class="eyebrow">Offline Scenic Tour</p>
         <h1 id="focusName">Sun</h1>
         <p id="focusFact">Local fallback running from the Orbit extension.</p>
       </section>
 
-      <section class="system sun-focus" id="system" aria-hidden="true">
-        <div class="orbit orbit-a">
-          <span class="planet planet-a"></span>
+      <section class="tour" aria-hidden="true">
+        <div class="sunlight"></div>
+        <div class="orbit-field" id="orbitField"></div>
+        <div class="focus-wrap" id="focusWrap">
+          <div class="focus-body" id="focusBody"></div>
+          <div class="focus-ring" id="focusRing"></div>
         </div>
-        <div class="orbit orbit-b">
-          <span class="planet planet-b"></span>
-        </div>
-        <div class="orbit orbit-c">
-          <span class="planet planet-c"></span>
-        </div>
-        <div class="sun"></div>
+        <ol class="tour-rail" id="tourRail"></ol>
       </section>
 
       <p class="caption" id="upgradeStatus">Will upgrade to PlanetsOOO when internet returns</p>
