@@ -12,6 +12,7 @@ import { useScreensaverMode } from "@/hooks/useScreensaverMode";
 
 const FLIGHT_IDLE_RETURN_MS = 15_000;
 const FLIGHT_IDLE_MOUSE_EPSILON = 2;
+const FLIGHT_IDLE_WHEEL_EPSILON = 1;
 
 function notifyScreensaverFlightMode(active: boolean): void {
   window.dispatchEvent(
@@ -193,9 +194,15 @@ export function ScreensaverBootstrap() {
       markFlightActivity();
     };
 
+    const returnToScenicFromPointer = (e: Event) => {
+      e.preventDefault();
+      e.stopImmediatePropagation();
+      returnToScenicTour();
+    };
+
     const onPointerExit = (e: MouseEvent | PointerEvent) => {
       if (flightEnteredRef.current) {
-        markFlightActivity();
+        returnToScenicFromPointer(e);
         return;
       }
       e.preventDefault();
@@ -211,7 +218,24 @@ export function ScreensaverBootstrap() {
       const movement =
         Math.abs(e.movementX ?? 0) + Math.abs(e.movementY ?? 0);
       if (movement < FLIGHT_IDLE_MOUSE_EPSILON) return;
-      markFlightActivity();
+      if (flightEnteredRef.current) {
+        returnToScenicFromPointer(e);
+        return;
+      }
+      startScenicTour(true);
+    };
+
+    const onFlightWheel = (e: WheelEvent) => {
+      const movement =
+        Math.abs(e.deltaX ?? 0) +
+        Math.abs(e.deltaY ?? 0) +
+        Math.abs(e.deltaZ ?? 0);
+      if (movement < FLIGHT_IDLE_WHEEL_EPSILON) return;
+      if (flightEnteredRef.current) {
+        returnToScenicFromPointer(e);
+        return;
+      }
+      startScenicTour(true);
     };
 
     window.addEventListener("keydown", onKeyDown, true);
@@ -221,7 +245,7 @@ export function ScreensaverBootstrap() {
     window.addEventListener("click", onPointerExit, true);
     window.addEventListener("contextmenu", onPointerExit, true);
     window.addEventListener("mousemove", onFlightMouseMove, true);
-    window.addEventListener("wheel", onFlightActivity, true);
+    window.addEventListener("wheel", onFlightWheel, true);
 
     return () => {
       clearFlightIdleTimer();
@@ -232,7 +256,7 @@ export function ScreensaverBootstrap() {
       window.removeEventListener("click", onPointerExit, true);
       window.removeEventListener("contextmenu", onPointerExit, true);
       window.removeEventListener("mousemove", onFlightMouseMove, true);
-      window.removeEventListener("wheel", onFlightActivity, true);
+      window.removeEventListener("wheel", onFlightWheel, true);
     };
   }, [
     screensaver,
