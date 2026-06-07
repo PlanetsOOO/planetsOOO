@@ -10,7 +10,6 @@ const DEFAULTS = {
   restoreWindowState: true,
 };
 
-const stateEl = document.getElementById("state");
 const form = document.getElementById("settings");
 const enabledEl = document.getElementById("enabled");
 const idleMinutesEl = document.getElementById("idleMinutes");
@@ -29,34 +28,6 @@ function formatIdleLabel(minutes) {
   if (value < 1) return `${Math.round(value * 60)} sec`;
   if (Number.isInteger(value)) return `${value} min`;
   return `${value.toFixed(2).replace(/0$/, "")} min`;
-}
-
-function formatStatus(status) {
-  if (!status?.ok) return "Extension background unavailable — reload extension.";
-
-  const lines = [
-    status.enabled ? "Enabled" : "Disabled",
-    `Idle: ${formatIdleLabel(status.idleMinutes)}`,
-    `Displays: ${status.displayIds?.length || 1}`,
-    status.running ? "Screensaver running" : "Waiting for idle…",
-  ];
-
-  if (status.siteUrl) {
-    if (status.flightKey) lines.push(`Flight: ${status.flightKey}`);
-    if (status.exitKey) lines.push(`Exit: ${status.exitKey}`);
-    if (status.flightMode) lines.push("Flight mode active");
-  }
-
-  const last = status.lastRun;
-  if (last?.ok) {
-    lines.push(`Last: ${last.state ?? "fullscreen"}`);
-    if (last.displays?.length) lines.push(last.displays.join(", "));
-    if (last.warning) lines.push(last.warning);
-  } else if (last?.error) {
-    lines.push(`Last error: ${last.error}`);
-  }
-
-  return lines.join("\n");
 }
 
 function displayName(display, index) {
@@ -115,11 +86,6 @@ function selectedDisplayIds() {
   ).map((input) => input.value);
 }
 
-function setStatus(text, ok = true) {
-  stateEl.textContent = text;
-  stateEl.dataset.ok = ok ? "1" : "0";
-}
-
 async function loadSettings() {
   const settings = { ...DEFAULTS, ...(await chrome.storage.sync.get(DEFAULTS)) };
   const displays = await getDisplays();
@@ -138,7 +104,7 @@ async function saveSettings() {
   const displays = selectedDisplayIds();
   const displayInputs = displayListEl.querySelectorAll('input[name="displayIds"]');
   if (displayInputs.length > 0 && displays.length === 0) {
-    setStatus("Select at least one display.", false);
+    console.warn("Select at least one display.");
     return false;
   }
 
@@ -153,18 +119,7 @@ async function saveSettings() {
     closeOnActive: closeOnActiveEl.checked,
     restoreWindowState: restoreWindowStateEl.checked,
   });
-  setStatus("Saved.");
   return true;
-}
-
-async function refresh() {
-  try {
-    const status = await chrome.runtime.sendMessage({ type: "status" });
-    stateEl.textContent = formatStatus(status);
-  } catch (err) {
-    stateEl.textContent =
-      err instanceof Error ? err.message : "Extension background unavailable.";
-  }
 }
 
 idleMinutesEl.addEventListener("input", () => {
@@ -176,43 +131,32 @@ form.addEventListener("submit", (event) => {
 });
 
 saveBtn.addEventListener("click", async () => {
+  const previous = saveBtn.textContent;
   try {
-    await saveSettings();
+    if (await saveSettings()) {
+      saveBtn.textContent = "Saved";
+      window.setTimeout(() => {
+        saveBtn.textContent = previous;
+      }, 900);
+    }
   } catch (err) {
-    setStatus(err instanceof Error ? err.message : "Save failed.", false);
+    console.warn(err instanceof Error ? err.message : "Save failed.");
   }
 });
 
 previewBtn.addEventListener("click", async () => {
-  stateEl.textContent = "Opening preview…";
   try {
     const saved = await saveSettings();
     if (!saved) return;
     const result = await chrome.runtime.sendMessage({ type: "preview" });
-    if (result?.ok) {
-      stateEl.textContent = [
-        `Opened in ${result.state ?? "fullscreen"} mode.`,
-        result.displays?.length ? `Displays: ${result.displays.join(", ")}` : "",
-        result.warning ?? "",
-      ]
-        .filter(Boolean)
-        .join("\n");
-      return;
-    }
-    stateEl.textContent = result?.error ?? "Preview failed.";
+    if (!result?.ok) console.warn(result?.error ?? "Preview failed.");
   } catch (err) {
-    stateEl.textContent = err instanceof Error ? err.message : "Preview failed.";
+    console.warn(err instanceof Error ? err.message : "Preview failed.");
   }
-  await refresh();
 });
 
-closeBtn.addEventListener("click", async () => {
-  try {
-    await chrome.runtime.sendMessage({ type: "close" });
-  } catch {
-    // ignore
-  }
-  await refresh();
+closeBtn.addEventListener("click", () => {
+  window.close();
 });
 
-void loadSettings().then(refresh);
+void loadSettings();

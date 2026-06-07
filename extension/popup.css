@@ -18,22 +18,6 @@ h1 {
   font-weight: 500;
 }
 
-.status {
-  margin: 0 0 0.75rem;
-  font-size: 0.75rem;
-  line-height: 1.4;
-  color: #71717a;
-  white-space: pre-line;
-}
-
-.status[data-ok="1"] {
-  color: #38bdf8;
-}
-
-.status[data-ok="0"] {
-  color: #f87171;
-}
-
 form {
   display: grid;
   gap: 0.55rem;

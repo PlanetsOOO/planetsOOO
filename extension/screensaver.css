@@ -83,6 +83,52 @@ body {
   width: min(68vw, 68vh);
   height: min(68vw, 68vh);
   opacity: 0.92;
+  transition:
+    transform 1600ms ease,
+    opacity 1600ms ease,
+    filter 1600ms ease;
+}
+
+.scene {
+  position: fixed;
+  left: clamp(1.2rem, 4vw, 3.5rem);
+  top: clamp(1.2rem, 5vh, 4rem);
+  z-index: 10;
+  max-width: min(28rem, 78vw);
+  color: rgba(226, 232, 240, 0.72);
+  pointer-events: none;
+  user-select: none;
+}
+
+.scene .eyebrow,
+.scene h1,
+.scene p {
+  margin: 0;
+  text-shadow: 0 0 18px rgba(2, 4, 10, 0.74);
+}
+
+.scene .eyebrow {
+  margin-bottom: 0.55rem;
+  color: rgba(148, 163, 184, 0.42);
+  font-size: 0.58rem;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+}
+
+.scene h1 {
+  color: rgba(226, 232, 240, 0.82);
+  font-size: clamp(1.65rem, 5vw, 4.2rem);
+  font-weight: 400;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.scene p {
+  margin-top: 0.7rem;
+  color: rgba(148, 163, 184, 0.55);
+  font-size: clamp(0.7rem, 1.5vw, 0.92rem);
+  line-height: 1.7;
+  letter-spacing: 0.06em;
 }
 
 .sun {
@@ -154,6 +200,25 @@ body {
   box-shadow: 0 0 28px rgba(129, 140, 248, 0.32);
 }
 
+.sun-focus {
+  transform: translate3d(12vw, 2vh, 0) scale(1.1);
+}
+
+.earth-focus {
+  transform: translate3d(-9vw, 5vh, 0) scale(1.35) rotate(-7deg);
+  filter: hue-rotate(18deg);
+}
+
+.mars-focus {
+  transform: translate3d(8vw, -7vh, 0) scale(1.24) rotate(11deg);
+  filter: sepia(0.18);
+}
+
+.saturn-focus {
+  transform: translate3d(-5vw, -5vh, 0) scale(1.55) rotate(-16deg);
+  filter: hue-rotate(42deg);
+}
+
 .caption,
 .hint {
   position: fixed;
@@ -176,6 +241,10 @@ body {
   bottom: 1.1rem;
   font-size: 0.55rem;
   opacity: 0.75;
+}
+
+.hint.is-visible {
+  color: rgba(191, 219, 254, 0.72);
 }
 
 @keyframes spin {

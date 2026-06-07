@@ -22,6 +22,8 @@ let screensaverFlightMode = false;
 const FULLSCREEN_CHECK_DELAY_MS = 3200;
 const FULLSCREEN_RECOVERY_DELAY_MS = 450;
 const FULLSCREEN_REQUEST_COOLDOWN_MS = 2500;
+const ONLINE_PROBE_TIMEOUT_MS = 2500;
+const OFFLINE_SCREENSAVER_PAGE = "screensaver.html";
 
 function promisifyChrome(fn, ...args) {
   return new Promise((resolve, reject) => {
@@ -59,6 +61,10 @@ function tabsGet(tabId) {
 
 function tabsRemove(tabId) {
   return promisifyChrome(chrome.tabs.remove, tabId);
+}
+
+function tabsUpdate(tabId, options) {
+  return promisifyChrome(chrome.tabs.update, tabId, options);
 }
 
 function tabsQuery(queryInfo) {
@@ -181,6 +187,14 @@ function isScreensaverUrl(url) {
   if (!url) return false;
   try {
     const parsed = new URL(url);
+    const extensionOrigin = new URL(chrome.runtime.getURL("")).origin;
+    if (
+      parsed.origin === extensionOrigin &&
+      parsed.pathname.endsWith(`/${OFFLINE_SCREENSAVER_PAGE}`)
+    ) {
+      return true;
+    }
+
     const screensaver = parsed.searchParams.get("screensaver");
     return (
       (parsed.hostname === "www.planets.ooo" ||
@@ -277,8 +291,51 @@ function buildPlanetsUrl(settings) {
   }
 }
 
-function getScreensaverUrl(settings) {
-  return buildPlanetsUrl(settings);
+function buildOfflineScreensaverUrl(settings) {
+  const url = new URL(chrome.runtime.getURL(OFFLINE_SCREENSAVER_PAGE));
+  url.searchParams.set("offline", "1");
+  url.searchParams.set("flightKey", settings.flightKey || DEFAULTS.flightKey);
+  url.searchParams.set("exitKey", settings.exitKey || settings.flightKey || DEFAULTS.exitKey);
+  return url.toString();
+}
+
+async function onlineScreensaverReachable(url) {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), ONLINE_PROBE_TIMEOUT_MS);
+
+  try {
+    const res = await fetch(url, {
+      method: "GET",
+      cache: "no-store",
+      signal: controller.signal,
+    });
+    return res.ok;
+  } catch {
+    return false;
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+async function getScreensaverUrl(settings) {
+  const onlineUrl = buildPlanetsUrl(settings);
+  if (await onlineScreensaverReachable(onlineUrl)) {
+    return {
+      url: onlineUrl,
+      source: "planets",
+      offline: false,
+      onlineUrl,
+      warning: null,
+    };
+  }
+
+  return {
+    url: buildOfflineScreensaverUrl(settings),
+    source: "packaged-offline",
+    offline: true,
+    onlineUrl,
+    warning: "PlanetsOOO is unavailable; using packaged offline scenic mode.",
+  };
 }
 
 function displayLabel(display, index) {
@@ -348,14 +405,18 @@ async function openScreensaver({ preview = false } = {}) {
     return result;
   }
 
-  const url = getScreensaverUrl(settings);
+  const screensaverUrl = await getScreensaverUrl(settings);
+  const url = screensaverUrl.url;
   const displays = await getSelectedDisplays(settings);
+  const warnings = [];
   const displayWarning =
     displays.length === 0
       ? "Display selection is unavailable in this Chrome build; using the current display."
       : hasMirroredBounds(displays)
         ? "Selected displays appear mirrored. Use the OS display settings to extend displays before selecting more than one monitor."
         : null;
+  if (displayWarning) warnings.push(displayWarning);
+  if (screensaverUrl.warning) warnings.push(screensaverUrl.warning);
 
   try {
     const instances = [];
@@ -442,9 +503,11 @@ async function openScreensaver({ preview = false } = {}) {
       tabIds: instances.map((instance) => instance.tabId),
       state: "fullscreen",
       mode: "display-windows",
-      source: settings.source,
+      source: screensaverUrl.source,
+      offline: screensaverUrl.offline,
+      onlineUrl: screensaverUrl.onlineUrl,
       displays: instances.map((instance) => instance.displayName),
-      warning: displayWarning,
+      warning: warnings.join(" ") || null,
     };
     await saveDebug(result);
     return result;
@@ -490,6 +553,46 @@ async function closeScreensaver(fallback = {}) {
   }
 
   return { ok: true };
+}
+
+async function upgradeOfflineScreensaver(tabId) {
+  if (tabId == null) {
+    return { ok: false, upgraded: false, error: "No active offline screensaver tab." };
+  }
+
+  if (!isScreensaverTabId(tabId)) {
+    const tab = await tabsGet(tabId).catch(() => null);
+    if (tab?.windowId != null && isScreensaverUrl(tab.url)) {
+      setScreensaverInstances([
+        ...screensaverInstances,
+        {
+          tabId,
+          windowId: tab.windowId,
+          displayId: `registered-${tab.windowId}`,
+          displayName: "Registered screensaver",
+        },
+      ]);
+    }
+  }
+
+  if (!isScreensaverTabId(tabId)) {
+    return { ok: false, upgraded: false, error: "No active offline screensaver tab." };
+  }
+
+  const settings = await getSettings();
+  const onlineUrl = buildPlanetsUrl(settings);
+  if (!(await onlineScreensaverReachable(onlineUrl))) {
+    return { ok: true, upgraded: false };
+  }
+
+  await tabsUpdate(tabId, { url: onlineUrl, active: true });
+  await saveDebug({
+    ok: true,
+    upgraded: true,
+    source: "planets",
+    url: onlineUrl,
+  });
+  return { ok: true, upgraded: true, url: onlineUrl };
 }
 
 chrome.idle.onStateChanged.addListener((state) => {
@@ -586,6 +689,11 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
     }
     sendResponse({ ok: true });
     return false;
+  }
+
+  if (message?.type === "upgrade-offline-screensaver") {
+    upgradeOfflineScreensaver(_sender?.tab?.id).then(sendResponse);
+    return true;
   }
 
   if (message?.type === "status") {

@@ -3,16 +3,22 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Orbit Screensaver</title>
+    <title>Orbit Offline Scenic Tour</title>
     <link rel="stylesheet" href="screensaver.css" />
   </head>
   <body>
-    <main class="space" aria-label="Orbit screensaver">
+    <main class="space" aria-label="Orbit offline scenic tour">
       <div class="stars stars-a"></div>
       <div class="stars stars-b"></div>
       <div class="nebula"></div>
 
-      <section class="system" aria-hidden="true">
+      <section class="scene" aria-live="polite">
+        <p class="eyebrow">Packaged Offline Scenic Mode</p>
+        <h1 id="focusName">Sun</h1>
+        <p id="focusFact">Local fallback running from the Orbit extension.</p>
+      </section>
+
+      <section class="system sun-focus" id="system" aria-hidden="true">
         <div class="orbit orbit-a">
           <span class="planet planet-a"></span>
         </div>
@@ -25,8 +31,8 @@
         <div class="sun"></div>
       </section>
 
-      <p class="caption">Orbit Screensaver</p>
-      <p class="hint">Right-click or press Escape to close</p>
+      <p class="caption" id="upgradeStatus">Will upgrade to PlanetsOOO when internet returns</p>
+      <p class="hint">Any input closes scenic mode · configured flight key shows online note</p>
     </main>
     <script src="screensaver.js"></script>
   </body>
