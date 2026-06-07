@@ -194,15 +194,9 @@ export function ScreensaverBootstrap() {
       markFlightActivity();
     };
 
-    const returnToScenicFromPointer = (e: Event) => {
-      e.preventDefault();
-      e.stopImmediatePropagation();
-      returnToScenicTour();
-    };
-
     const onPointerExit = (e: MouseEvent | PointerEvent) => {
       if (flightEnteredRef.current) {
-        returnToScenicFromPointer(e);
+        markFlightActivity();
         return;
       }
       e.preventDefault();
@@ -219,10 +213,12 @@ export function ScreensaverBootstrap() {
         Math.abs(e.movementX ?? 0) + Math.abs(e.movementY ?? 0);
       if (movement < FLIGHT_IDLE_MOUSE_EPSILON) return;
       if (flightEnteredRef.current) {
-        returnToScenicFromPointer(e);
+        markFlightActivity();
         return;
       }
-      startScenicTour(true);
+      e.preventDefault();
+      e.stopImmediatePropagation();
+      exitScreensaver();
     };
 
     const onFlightWheel = (e: WheelEvent) => {
@@ -232,10 +228,12 @@ export function ScreensaverBootstrap() {
         Math.abs(e.deltaZ ?? 0);
       if (movement < FLIGHT_IDLE_WHEEL_EPSILON) return;
       if (flightEnteredRef.current) {
-        returnToScenicFromPointer(e);
+        markFlightActivity();
         return;
       }
-      startScenicTour(true);
+      e.preventDefault();
+      e.stopImmediatePropagation();
+      exitScreensaver();
     };
 
     window.addEventListener("keydown", onKeyDown, true);

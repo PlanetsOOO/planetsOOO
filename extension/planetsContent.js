@@ -2,6 +2,8 @@ const DEFAULTS = {
   flightKey: "Backquote",
   exitKey: "Backquote",
 };
+const POINTER_NOISE_EPSILON = 2;
+const WHEEL_NOISE_EPSILON = 1;
 
 function isScreensaverPage() {
   const params = new URLSearchParams(window.location.search);
@@ -79,9 +81,33 @@ if (isScreensaverPage()) {
       closeScreensaver();
     };
 
+    const closeOnMeaningfulMouseMove = (event) => {
+      if (flightMode) return;
+      const movement =
+        Math.abs(event.movementX || 0) + Math.abs(event.movementY || 0);
+      if (movement < POINTER_NOISE_EPSILON) return;
+      event.preventDefault();
+      event.stopImmediatePropagation();
+      closeScreensaver();
+    };
+
+    const closeOnMeaningfulWheel = (event) => {
+      if (flightMode) return;
+      const movement =
+        Math.abs(event.deltaX || 0) +
+        Math.abs(event.deltaY || 0) +
+        Math.abs(event.deltaZ || 0);
+      if (movement < WHEEL_NOISE_EPSILON) return;
+      event.preventDefault();
+      event.stopImmediatePropagation();
+      closeScreensaver();
+    };
+
     window.addEventListener("pointerdown", closeOnPointer, true);
     window.addEventListener("mousedown", closeOnPointer, true);
     window.addEventListener("click", closeOnPointer, true);
     window.addEventListener("contextmenu", closeOnPointer, true);
+    window.addEventListener("mousemove", closeOnMeaningfulMouseMove, true);
+    window.addEventListener("wheel", closeOnMeaningfulWheel, true);
   });
 }

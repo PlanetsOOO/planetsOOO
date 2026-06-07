@@ -103,7 +103,7 @@ Keep the last ~10 entries. Delete rows that no longer teach you anything.
 | 2026-06-01 | Planet hover caused subtle magnification | Removed hover scale; kept hover highlighting | Check cursor hover on bodies |
 | 2026-06-02 | Moon had hover-only label in screensaver | Use shared label toggle for Moon and screensaver L key | Check L shows all body labels |
 | 2026-06-03 | Extension options were split out and flight exit closed screensaver | Moved settings into popup; exit/idle returns to scenic guard mode | Check popup settings and exit-key return |
-| 2026-06-06 | Mouse/trackpad motion should leave screensaver flight cleanly | Meaningful move/wheel returns to scenic; tiny noise ignored | Check pointer-lock jitter and deliberate movement |
+| 2026-06-06 | Mouse/trackpad motion should not interrupt screensaver flight | Move/wheel exits scenic only; flight treats it as activity | Check scenic exit and flight pointer controls |
 | | | | |
 
 ---
