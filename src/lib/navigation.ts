@@ -102,6 +102,28 @@ export function getLookTarget(planetPos: THREE.Vector3): THREE.Vector3 {
 /** Radians per second for ← / → roll in flight and scenic tour. */
 export const CAMERA_ROLL_SPEED = 1.35;
 
+/**
+ * Screen-space look input — counter-rotates by roll so trackpad/mouse panning
+ * stays aligned with the view instead of the bank angle.
+ */
+export function applyPovLookDelta(
+  deltaX: number,
+  deltaY: number,
+  yaw: number,
+  pitch: number,
+  roll: number,
+  sensitivity: number,
+): { yaw: number; pitch: number } {
+  const c = Math.cos(roll);
+  const s = Math.sin(roll);
+  const localX = deltaX * c + deltaY * s;
+  const localY = deltaY * c - deltaX * s;
+  return {
+    yaw: yaw - localX * sensitivity,
+    pitch: pitch - localY * sensitivity,
+  };
+}
+
 /** Unit look direction from YXZ yaw/pitch/roll (matches Three.js camera rotation). */
 export function directionFromAngles(
   yaw: number,

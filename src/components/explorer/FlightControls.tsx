@@ -34,6 +34,7 @@ import {
 } from "@/lib/lightspeed";
 import {
   applyCameraAngles,
+  applyPovLookDelta,
   CAMERA_ROLL_SPEED,
   directionFromAngles,
   rightFromAngles,
@@ -46,7 +47,32 @@ import { viewerPosition } from "@/lib/viewerState";
 import { lightspeedState, resetLightspeedState } from "@/lib/warpState";
 
 const MOUSE_SENSITIVITY = 0.0022;
+const WHEEL_LOOK_SENSITIVITY = 0.00018;
 const PITCH_LIMIT = Math.PI / 2 - 0.12;
+
+function clampPitch(pitch: number): number {
+  return THREE.MathUtils.clamp(pitch, -PITCH_LIMIT, PITCH_LIMIT);
+}
+
+function applyLookDelta(
+  deltaX: number,
+  deltaY: number,
+  sensitivity: number,
+  yawRef: React.MutableRefObject<number>,
+  pitchRef: React.MutableRefObject<number>,
+  roll: number,
+): void {
+  const next = applyPovLookDelta(
+    deltaX,
+    deltaY,
+    yawRef.current,
+    pitchRef.current,
+    roll,
+    sensitivity,
+  );
+  yawRef.current = next.yaw;
+  pitchRef.current = clampPitch(next.pitch);
+}
 
 function requestPointerLockIfSupported(el: HTMLElement): void {
   el.requestPointerLock?.();
@@ -312,12 +338,55 @@ export function FlightControls({
           markIdleOrbitUserActivity();
         }
       }
-      yawRef.current -= e.movementX * MOUSE_SENSITIVITY;
-      pitchRef.current -= e.movementY * MOUSE_SENSITIVITY;
-      pitchRef.current = THREE.MathUtils.clamp(
-        pitchRef.current,
-        -PITCH_LIMIT,
-        PITCH_LIMIT,
+      applyLookDelta(
+        e.movementX,
+        e.movementY,
+        MOUSE_SENSITIVITY,
+        yawRef,
+        pitchRef,
+        rollRef.current,
+      );
+    };
+
+    const onWheel = (e: WheelEvent) => {
+      if (isEditableOrMenuTarget(e.target)) return;
+
+      const routeTrip = routeActiveRef.current && autoNavigatingRef.current;
+      const discoveryOrbit =
+        discoveryActiveRef.current &&
+        discoveryAutopilotState.phase === "orbit";
+      const pointerLocked = document.pointerLockElement === el;
+      const canLook =
+        pointerLocked ||
+        (routeTrip && routeDragLook.current) ||
+        (discoveryOrbit && discoveryOrbitDragLook.current);
+
+      if (autoNavigatingRef.current && !routeTrip) return;
+      if (!canLook) return;
+
+      const movement =
+        Math.abs(e.deltaX) + Math.abs(e.deltaY) + Math.abs(e.deltaZ);
+      if (movement < 0.5) return;
+
+      e.preventDefault();
+
+      if (pointerLocked) {
+        markFlightReticleActivity();
+      }
+      if (discoveryOrbit) {
+        markDiscoveryPovActivity();
+        markScenicChromeActivity();
+      } else if (!discoveryActiveRef.current) {
+        markIdleOrbitUserActivity();
+      }
+
+      applyLookDelta(
+        e.deltaX,
+        e.deltaY,
+        WHEEL_LOOK_SENSITIVITY,
+        yawRef,
+        pitchRef,
+        rollRef.current,
       );
     };
 
@@ -326,6 +395,7 @@ export function FlightControls({
     el.addEventListener("mousedown", onMouseDown);
     window.addEventListener("mouseup", onMouseUp);
     el.addEventListener("click", onClick);
+    el.addEventListener("wheel", onWheel, { passive: false });
     document.addEventListener("mousemove", onMouseMove);
     document.addEventListener("pointerlockchange", onPointerLockChange);
 
@@ -335,6 +405,7 @@ export function FlightControls({
       el.removeEventListener("mousedown", onMouseDown);
       window.removeEventListener("mouseup", onMouseUp);
       el.removeEventListener("click", onClick);
+      el.removeEventListener("wheel", onWheel);
       document.removeEventListener("mousemove", onMouseMove);
       document.removeEventListener("pointerlockchange", onPointerLockChange);
     };
@@ -440,12 +511,13 @@ export function FlightControls({
       const ldx = mobileTouchState.lookDx;
       const ldy = mobileTouchState.lookDy;
       if (ldx !== 0 || ldy !== 0) {
-        yawRef.current -= ldx * MOBILE_LOOK_SENSITIVITY;
-        pitchRef.current -= ldy * MOBILE_LOOK_SENSITIVITY;
-        pitchRef.current = THREE.MathUtils.clamp(
-          pitchRef.current,
-          -PITCH_LIMIT,
-          PITCH_LIMIT,
+        applyLookDelta(
+          ldx,
+          ldy,
+          MOBILE_LOOK_SENSITIVITY,
+          yawRef,
+          pitchRef,
+          rollRef.current,
         );
         mobileTouchState.lookDx = 0;
         mobileTouchState.lookDy = 0;
