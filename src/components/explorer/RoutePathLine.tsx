@@ -1,8 +1,7 @@
 "use client";
 
 import { useFrame } from "@react-three/fiber";
-import { Line } from "@react-three/drei";
-import { useMemo, useRef } from "react";
+import { useMemo } from "react";
 import * as THREE from "three";
 import { isMoonTarget, type NavTargetId } from "@/data/navigationTargets";
 import { getPlanet } from "@/data/planets";
@@ -10,57 +9,47 @@ import { getMoonHeliocentricPosition } from "@/lib/astronomy/moonEphemeris";
 import { getSimulationDate } from "@/lib/simulationTime";
 import { useExplorer } from "@/context/ExplorerContext";
 import { getTargetPosition } from "@/lib/targetPositions";
-import {
-  AU_PER_LEGACY_UNIT,
-  floatingOriginState,
-} from "@/lib/coordinates/frame";
 import { RENDER_FRAME_PRIORITY } from "@/lib/renderFramePriority";
+import { StableOrbitLine } from "./StableOrbitLine";
 
-function resolveAbsolute(id: NavTargetId): THREE.Vector3 {
+function resolveAbsolute(id: NavTargetId, target = new THREE.Vector3()): THREE.Vector3 {
   const live = getTargetPosition(id);
-  if (live) return live.clone();
+  if (live) return target.copy(live);
   if (isMoonTarget(id)) {
-    return getMoonHeliocentricPosition(getSimulationDate(), new THREE.Vector3());
+    return getMoonHeliocentricPosition(getSimulationDate(), target);
   }
   const config = getPlanet(id);
-  if (config.orbitRadius === 0) return new THREE.Vector3(0, 0, 0);
-  return new THREE.Vector3(config.orbitRadius, 0, 0);
+  if (config.orbitRadius === 0) return target.set(0, 0, 0);
+  return target.set(config.orbitRadius, 0, 0);
 }
 
 export function RoutePathLine() {
   const { routeWaypoints, routeActive } = useExplorer();
-  const groupRef = useRef<THREE.Group>(null);
 
-  const linePoints = useMemo(() => {
-    if (!routeActive || routeWaypoints.length < 2) return [];
-    return routeWaypoints.map((id) =>
-      resolveAbsolute(id).multiplyScalar(AU_PER_LEGACY_UNIT),
-    );
-  }, [routeActive, routeWaypoints]);
+  const absolutePoints = useMemo(
+    () => routeWaypoints.map(() => new THREE.Vector3()),
+    [routeWaypoints],
+  );
 
   useFrame(() => {
-    if (!groupRef.current) {
-      return;
+    if (!routeActive || routeWaypoints.length < 2) return;
+    for (let i = 0; i < routeWaypoints.length; i += 1) {
+      resolveAbsolute(routeWaypoints[i], absolutePoints[i]);
     }
-    groupRef.current.position
-      .copy(floatingOriginState.anchor)
-      .multiplyScalar(-AU_PER_LEGACY_UNIT);
-  }, RENDER_FRAME_PRIORITY.bodies);
+  }, RENDER_FRAME_PRIORITY.controls);
 
-  if (!routeActive || linePoints.length < 2) return null;
+  if (!routeActive || routeWaypoints.length < 2) return null;
 
   return (
-    <group ref={groupRef}>
-      <Line
-        points={linePoints}
-        color="#5b9fff"
-        lineWidth={1}
-        transparent
-        opacity={0.45}
-        dashed
-        dashSize={0.015}
-        gapSize={0.009}
-      />
-    </group>
+    <StableOrbitLine
+      absolutePoints={absolutePoints}
+      color="#5b9fff"
+      lineWidth={1}
+      transparent
+      opacity={0.45}
+      dashed
+      dashSize={0.015}
+      gapSize={0.009}
+    />
   );
 }
