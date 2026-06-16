@@ -7,6 +7,7 @@ import * as THREE from "three";
 import type { NavTargetId } from "@/data/navigationTargets";
 import { useExplorer } from "@/context/ExplorerContext";
 import { RENDER_FRAME_PRIORITY } from "@/lib/renderFramePriority";
+import { isLabelOccluded } from "@/lib/labelOcclusion";
 
 const VIEW_MARGIN = 0.02;
 const LABEL_OVERLAP_PADDING_PX = 3;
@@ -16,6 +17,7 @@ const LABEL_VIEWPORT_MARGIN_PX = 8;
 const LABEL_LAYOUT_THROTTLE_MS = 120;
 
 const _bodyCenter = new THREE.Vector3();
+const _labelWorld = new THREE.Vector3();
 const _bodyNdc = new THREE.Vector3();
 
 interface LabelRecord {
@@ -204,16 +206,20 @@ export function BodyLabel({
     };
   }, [navTargetId]);
 
-  useFrame(({ camera }) => {
+  useFrame(({ camera, size }) => {
     const body = bodyCenterRef.current;
     const htmlRoot = htmlRootRef.current;
-    if (!body || !htmlRoot) return;
+    const labelGroup = labelRef.current;
+    if (!body || !htmlRoot || !labelGroup) return;
 
     camera.updateMatrixWorld(true);
     body.getWorldPosition(_bodyCenter);
     _bodyNdc.copy(_bodyCenter).project(camera);
+    labelGroup.getWorldPosition(_labelWorld);
 
-    const onScreen = bodyInView(_bodyNdc);
+    const onScreen =
+      bodyInView(_bodyNdc) &&
+      !isLabelOccluded(navTargetId, _labelWorld, camera, size);
     htmlRoot.style.display = onScreen ? "block" : "none";
     htmlRoot.style.pointerEvents = onScreen ? "auto" : "none";
     const record = labelRecords.get(navTargetId);

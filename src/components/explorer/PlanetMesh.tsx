@@ -43,6 +43,7 @@ import { angularDiameterPixels } from "@/lib/astronomy/scale";
 import { setTargetPosition } from "@/lib/targetPositions";
 import { getSimulationDate } from "@/lib/simulationTime";
 import { absoluteToRenderSpace, bodyRenderRadius } from "@/lib/coordinates/frame";
+import { registerBodyOccluder, removeLabelOccluder } from "@/lib/labelOcclusion";
 import { getSunWorldPosition, viewerPosition } from "@/lib/viewerState";
 import { BodyLabel } from "./BodyLabel";
 
@@ -313,7 +314,19 @@ export function PlanetMesh({ config }: PlanetMeshProps) {
         updateEarthSunDirection(bodyMatRef.current, sunDir);
       }
     }
+
+    registerBodyOccluder(
+      config.id,
+      visualScaleRef.current,
+      renderRadius,
+    );
   }, RENDER_FRAME_PRIORITY.bodies);
+
+  useEffect(() => {
+    return () => {
+      removeLabelOccluder(config.id);
+    };
+  }, [config.id]);
 
   useEffect(() => {
     const body = bodyRef.current;

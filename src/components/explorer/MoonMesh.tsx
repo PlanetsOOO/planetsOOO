@@ -30,6 +30,7 @@ import {
   absoluteToRenderSpace,
   moonRenderRadius,
 } from "@/lib/coordinates/frame";
+import { registerBodyOccluder, removeLabelOccluder } from "@/lib/labelOcclusion";
 import { RENDER_FRAME_PRIORITY } from "@/lib/renderFramePriority";
 import { BodyLabel } from "./BodyLabel";
 
@@ -142,7 +143,14 @@ export function MoonMesh() {
       visualScaleRef.current.scale.setScalar(sizeScale);
     }
 
+    registerBodyOccluder("moon", visualScaleRef.current, renderRadius);
   }, RENDER_FRAME_PRIORITY.bodies);
+
+  useEffect(() => {
+    return () => {
+      removeLabelOccluder("moon");
+    };
+  }, []);
 
   useEffect(() => {
     const body = bodyRef.current;
