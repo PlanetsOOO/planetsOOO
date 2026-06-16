@@ -66,7 +66,7 @@ export function computeApproachDetail(
   distanceRatio: number,
 ): ApproachDetailState {
   const r = clampRatio(distanceRatio);
-  const active = r <= APPROACH_OUTER_RADIUS_RATIO;
+  const active = distanceRatio <= APPROACH_OUTER_RADIUS_RATIO;
   const layer = resolveApproachLayer(r);
   const outer = APPROACH_LAYER_EDGES[layer];
   const inner = APPROACH_LAYER_EDGES[layer + 1];

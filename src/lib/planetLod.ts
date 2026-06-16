@@ -19,6 +19,16 @@ export function computeImpostorMeshBlend(
   return THREE.MathUtils.smoothstep(angularPx, 2, 12);
 }
 
+export function shouldUseImpostor(
+  angularPx: number,
+  currentlyUsingImpostor: boolean,
+  forceFullMesh = false,
+): boolean {
+  if (forceFullMesh) return false;
+  // Hysteresis keeps fast approaches from flickering at the mesh/impostor cutoff.
+  return currentlyUsingImpostor ? angularPx < 4 : angularPx < 1.8;
+}
+
 /** Blend between adjacent LOD segment counts for smoother geometry transitions. */
 export function blendLodSegments(
   dist: number,

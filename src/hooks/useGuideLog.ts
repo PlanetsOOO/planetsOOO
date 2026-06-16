@@ -97,8 +97,13 @@ export function useGuideLog(enabled: boolean): string[] {
 
   useEffect(() => {
     if (!enabled) {
-      setLines([]);
-      return;
+      let cancelled = false;
+      queueMicrotask(() => {
+        if (!cancelled) setLines([]);
+      });
+      return () => {
+        cancelled = true;
+      };
     }
 
     const tick = () => {

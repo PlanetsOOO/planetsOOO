@@ -4,10 +4,11 @@ const DEFAULTS = {
   source: "planets",
   siteUrl: "https://www.planets.ooo/",
   displayIds: [],
+  allowMultipleDisplays: false,
+  plan: "basic",
   flightKey: "Backquote",
   exitKey: "Backquote",
   closeOnActive: false,
-  restoreWindowState: true,
 };
 
 const form = document.getElementById("settings");
@@ -15,13 +16,33 @@ const enabledEl = document.getElementById("enabled");
 const idleMinutesEl = document.getElementById("idleMinutes");
 const idleMinutesLabel = document.getElementById("idleMinutesLabel");
 const displayListEl = document.getElementById("displayList");
+const allowMultipleDisplaysEl = document.getElementById("allowMultipleDisplays");
+const flightSectionEl = document.getElementById("flightSection");
 const flightKeyEl = document.getElementById("flightKey");
 const exitKeyEl = document.getElementById("exitKey");
 const closeOnActiveEl = document.getElementById("closeOnActive");
-const restoreWindowStateEl = document.getElementById("restoreWindowState");
+const premiumLinkEl = document.getElementById("premiumLink");
 const saveBtn = document.getElementById("save");
 const previewBtn = document.getElementById("preview");
 const closeBtn = document.getElementById("close");
+let currentPlan = DEFAULTS.plan;
+
+async function getInstallId() {
+  const stored = await chrome.storage.local.get({ premiumInstallId: "" });
+  if (stored.premiumInstallId) return stored.premiumInstallId;
+  const installId = crypto.randomUUID();
+  await chrome.storage.local.set({ premiumInstallId: installId });
+  return installId;
+}
+
+async function updatePremiumLink() {
+  if (!premiumLinkEl) return;
+  const installId = await getInstallId();
+  const url = new URL("/premium", DEFAULTS.siteUrl);
+  url.searchParams.set("extensionId", chrome.runtime.id);
+  url.searchParams.set("installId", installId);
+  premiumLinkEl.href = url.toString();
+}
 
 function formatIdleLabel(minutes) {
   const value = Number(minutes);
@@ -86,18 +107,41 @@ function selectedDisplayIds() {
   ).map((input) => input.value);
 }
 
+function isPremium(settings) {
+  return settings.plan === "premium";
+}
+
+function applyPlanState(settings) {
+  const premium = isPremium(settings);
+  flightSectionEl.classList.toggle("is-basic", !premium);
+  flightKeyEl.disabled = !premium;
+  exitKeyEl.disabled = !premium;
+}
+
 async function loadSettings() {
   const settings = { ...DEFAULTS, ...(await chrome.storage.sync.get(DEFAULTS)) };
+  const local = await chrome.storage.local.get({
+    adminPremiumOverride: false,
+    premiumEntitlement: "",
+  });
   const displays = await getDisplays();
+  const hasEntitlement =
+    typeof local.premiumEntitlement === "string" &&
+    local.premiumEntitlement.length > 0;
+  currentPlan =
+    local.adminPremiumOverride || (settings.plan === "premium" && hasEntitlement)
+      ? "premium"
+      : "basic";
 
   enabledEl.checked = settings.enabled;
   idleMinutesEl.value = String(settings.idleMinutes);
   idleMinutesLabel.textContent = formatIdleLabel(settings.idleMinutes);
   renderDisplays(displays, settings.displayIds);
+  allowMultipleDisplaysEl.checked = Boolean(settings.allowMultipleDisplays);
   flightKeyEl.value = settings.flightKey;
   exitKeyEl.value = settings.exitKey || settings.flightKey;
   closeOnActiveEl.checked = settings.closeOnActive;
-  restoreWindowStateEl.checked = settings.restoreWindowState;
+  applyPlanState({ ...settings, plan: currentPlan });
 }
 
 async function saveSettings() {
@@ -113,11 +157,12 @@ async function saveSettings() {
     source: DEFAULTS.source,
     siteUrl: DEFAULTS.siteUrl,
     displayIds: displays,
+    allowMultipleDisplays: allowMultipleDisplaysEl.checked,
+    plan: currentPlan,
     flightKey: flightKeyEl.value,
     exitKey: exitKeyEl.value,
     idleMinutes: Number(idleMinutesEl.value),
     closeOnActive: closeOnActiveEl.checked,
-    restoreWindowState: restoreWindowStateEl.checked,
   });
   return true;
 }
@@ -159,4 +204,21 @@ closeBtn.addEventListener("click", () => {
   window.close();
 });
 
+premiumLinkEl?.addEventListener("click", async (event) => {
+  event.preventDefault();
+  try {
+    await updatePremiumLink();
+    const result = await chrome.runtime.sendMessage({
+      type: "open-premium-checkout",
+      url: premiumLinkEl.href,
+    });
+    if (!result?.ok) {
+      console.warn(result?.error ?? "Unable to open Premium.");
+    }
+  } catch (err) {
+    console.warn(err instanceof Error ? err.message : "Unable to open Premium.");
+  }
+});
+
 void loadSettings();
+void updatePremiumLink();

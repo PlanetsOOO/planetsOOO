@@ -44,6 +44,7 @@ import {
   applyCameraAngles,
   cameraAnglesFromPosition,
 } from "@/lib/navigation";
+import { RENDER_FRAME_PRIORITY } from "@/lib/renderFramePriority";
 import { getSimulationDate } from "@/lib/simulationTime";
 import { earthApproachState } from "@/lib/earthApproach";
 import { getTargetPosition, setTargetPosition } from "@/lib/targetPositions";
@@ -372,7 +373,7 @@ export function DiscoveryAutopilotController({
       );
       cam.updateProjectionMatrix();
     }
-  });
+  }, RENDER_FRAME_PRIORITY.controls);
 
   return null;
 }

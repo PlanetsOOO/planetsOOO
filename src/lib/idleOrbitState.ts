@@ -34,8 +34,3 @@ export function isIdleOrbitInactiveLongEnough(now = Date.now()): boolean {
 export function resetIdleOrbitActivityClock(): void {
   idleOrbitState.lastActivityMs = Date.now();
 }
-
-/** @deprecated */
-export const earthOrbitState = idleOrbitState;
-/** @deprecated */
-export const markEarthOrbitUserActivity = markIdleOrbitUserActivity;

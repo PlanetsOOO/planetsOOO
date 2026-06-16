@@ -11,6 +11,7 @@ import {
   absoluteToCameraSpace,
   navTargetRenderRadius,
 } from "@/lib/coordinates/frame";
+import { RENDER_FRAME_PRIORITY } from "@/lib/renderFramePriority";
 import { getTargetPosition } from "@/lib/targetPositions";
 
 const rayOrigin = new THREE.Vector3();
@@ -93,7 +94,7 @@ export function FlightTargetSelector({
 
     hits.sort((a, b) => a.distance - b.distance);
     flightReticleState.targetId = hits[0]?.id ?? null;
-  });
+  }, RENDER_FRAME_PRIORITY.overlays);
 
   return null;
 }

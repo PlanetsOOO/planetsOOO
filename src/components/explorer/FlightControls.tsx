@@ -41,6 +41,7 @@ import {
 import { markIdleOrbitUserActivity, idleOrbitState } from "@/lib/idleOrbitState";
 import { discoveryAutopilotState, markDiscoveryPovActivity } from "@/lib/discoveryAutopilot";
 import { flightReticleState } from "@/lib/flightReticleState";
+import { RENDER_FRAME_PRIORITY } from "@/lib/renderFramePriority";
 import { viewerPosition } from "@/lib/viewerState";
 import { lightspeedState, resetLightspeedState } from "@/lib/warpState";
 
@@ -669,7 +670,7 @@ export function FlightControls({
       cam.fov = THREE.MathUtils.lerp(cam.fov, targetFov, 1 - Math.exp(-4 * dt));
       cam.updateProjectionMatrix();
     }
-  });
+  }, RENDER_FRAME_PRIORITY.controls);
 
   return null;
 }

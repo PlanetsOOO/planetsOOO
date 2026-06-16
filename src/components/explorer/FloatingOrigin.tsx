@@ -8,6 +8,7 @@ import {
   getRenderClipPlanes,
   syncFloatingOrigin,
 } from "@/lib/coordinates/frame";
+import { RENDER_FRAME_PRIORITY } from "@/lib/renderFramePriority";
 
 export function FloatingOrigin({ children }: { children: React.ReactNode }) {
   const groupRef = useRef<THREE.Group>(null);
@@ -28,7 +29,7 @@ export function FloatingOrigin({ children }: { children: React.ReactNode }) {
         cam.updateProjectionMatrix();
       }
     }
-  });
+  }, RENDER_FRAME_PRIORITY.origin);
 
   return <group ref={groupRef}>{children}</group>;
 }

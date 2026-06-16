@@ -5,6 +5,7 @@ import { useFrame, useThree } from "@react-three/fiber";
 import * as THREE from "three";
 import type { FlightState } from "@/hooks/useFlightState";
 import { createCircularSpriteMaterial } from "@/lib/materials/circularSprite";
+import { RENDER_FRAME_PRIORITY } from "@/lib/renderFramePriority";
 import { lightspeedState } from "@/lib/warpState";
 
 const PARTICLE_COUNT = 160;
@@ -137,7 +138,7 @@ export function ThrustEffect({ flightRef }: ThrustEffectProps) {
     } else {
       color.lerp(new THREE.Color("#7eb8ff"), 0.08);
     }
-  });
+  }, RENDER_FRAME_PRIORITY.effects);
 
   return (
     <points ref={pointsRef} geometry={geometry} frustumCulled={false}>

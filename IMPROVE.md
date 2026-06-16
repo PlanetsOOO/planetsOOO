@@ -105,7 +105,12 @@ Keep the last ~10 entries. Delete rows that no longer teach you anything.
 | 2026-06-03 | Extension options were split out and flight exit closed screensaver | Moved settings into popup; exit/idle returns to scenic guard mode | Check popup settings and exit-key return |
 | 2026-06-06 | Mouse/trackpad motion should not interrupt screensaver flight | Move/wheel exits scenic only; flight treats it as activity | Check scenic exit and flight pointer controls |
 | 2026-06-07 | Offline fallback looked unlike the scenic tour | Packaged all-planets loop with online upgrade probe | Check offline preview then reconnect |
-| | | | |
+| 2026-06-08 | Offline fallback had placeholder artifacts and overlap | Sequential shadow-aware POV handoffs | Check offline preview through Sun-to-Neptune loop |
+| 2026-06-08 | Extension flight needed quiet telemetry and readable labels | Extension speed overlay; overlap-only label staggering | Check extension flight + L labels |
+| 2026-06-08 | Extension needs clear Basic vs Premium behavior | Basic gates flight; Premium link and controls list | Check popup + flight key in Basic |
+| 2026-06-09 | Premium needed a payment path before accounts exist | Stripe Checkout + extension entitlement handoff | Check test checkout unlocks Premium |
+| 2026-06-14 | Premium needed unique offline value | Packaged offline flight controls behind Premium gate | Check offline preview with Premium flight key |
+| 2026-06-14 | Screensaver close could reveal a second stale window | Query and close every matching screensaver tab | Check one input closes all screensaver windows |
 
 ---
 

@@ -11,6 +11,7 @@ import { getSimulationDate } from "@/lib/simulationTime";
 import { useExplorer } from "@/context/ExplorerContext";
 import { getTargetPosition } from "@/lib/targetPositions";
 import { absoluteToRenderSpace } from "@/lib/coordinates/frame";
+import { RENDER_FRAME_PRIORITY } from "@/lib/renderFramePriority";
 
 function resolveAbsolute(id: NavTargetId): THREE.Vector3 {
   const live = getTargetPosition(id);
@@ -38,7 +39,7 @@ export function RoutePathLine() {
       return absoluteToRenderSpace(absolute, new THREE.Vector3());
     });
     invalidate();
-  });
+  }, RENDER_FRAME_PRIORITY.bodies);
 
   if (!routeActive || routeWaypoints.length < 2) return null;
 

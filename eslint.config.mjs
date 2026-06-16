@@ -17,6 +17,7 @@ const eslintConfig = defineConfig([
     ".next/**",
     "out/**",
     "build/**",
+    "extension/screensaver.js",
     "next-env.d.ts",
   ]),
 ]);

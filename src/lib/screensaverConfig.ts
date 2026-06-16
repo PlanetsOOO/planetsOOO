@@ -1,5 +1,7 @@
 export interface ScreensaverConfig {
   active: boolean;
+  /** Extension capability gate: basic mode disables flight entry. */
+  flightEnabled: boolean;
   /** KeyboardEvent.code for entering flight from scenic autopilot. */
   enterFlightKey: string;
   /** KeyboardEvent.code for leaving flight/screensaver. */
@@ -21,14 +23,17 @@ export function readScreensaverConfig(): ScreensaverConfig {
   if (typeof window === "undefined") {
     return {
       active: false,
+      flightEnabled: false,
       enterFlightKey: DEFAULT_ENTER_FLIGHT_KEY,
       exitKey: DEFAULT_EXIT_KEY,
     };
   }
 
   const params = new URLSearchParams(window.location.search);
+  const flightParam = params.get("flight");
   return {
     active: isScreensaverMode(),
+    flightEnabled: flightParam == null || flightParam === "1" || flightParam === "true",
     enterFlightKey: params.get("flightKey")?.trim() || DEFAULT_ENTER_FLIGHT_KEY,
     exitKey: params.get("exitKey")?.trim() || params.get("flightKey")?.trim() || DEFAULT_EXIT_KEY,
   };

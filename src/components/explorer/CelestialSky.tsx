@@ -17,6 +17,7 @@ import {
   magnitudeToBrightness,
   raDecToVector3,
 } from "@/lib/celestial/coordinates";
+import { RENDER_FRAME_PRIORITY } from "@/lib/renderFramePriority";
 
 interface StarFeature {
   type: "Feature";
@@ -235,7 +236,7 @@ export function CelestialSky() {
     if (!scaleRef.current) return;
     const scale = getCelestialSphereScale();
     scaleRef.current.scale.setScalar(scale);
-  });
+  }, RENDER_FRAME_PRIORITY.bodies);
 
   return (
     <group ref={scaleRef}>

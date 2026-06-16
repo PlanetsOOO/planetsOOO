@@ -2,12 +2,15 @@ import type { PlanetConfig } from "@/data/planets";
 import type { NavTargetId } from "@/data/navigationTargets";
 import { isMoonTarget } from "@/data/navigationTargets";
 import { MOON } from "@/data/moon";
+import { SUN_DISPLAY_RADIUS_SCALE } from "@/lib/astronomy/scale";
 import * as THREE from "three";
 
-/** Default showcase standoff — ~6 body radii (matches Earth idle orbit). */
-export const ORBIT_VIEW_RADIUS_SCALE = 6;
+/** Default showcase standoff — closer framing for scenic focus. */
+export const ORBIT_VIEW_RADIUS_SCALE = 3;
 const OVERSIZED_BODY_RADIUS_UNITS = 200;
 const OVERSIZED_BODY_ORBIT_VIEW_RADIUS_SCALE = 14;
+const SUN_ORBIT_VIEW_RADIUS_SCALE =
+  ORBIT_VIEW_RADIUS_SCALE * SUN_DISPLAY_RADIUS_SCALE;
 /** Auto lightspeed when farther than this from the target (scene units). */
 export const AUTO_NAV_WARP_DISTANCE = 120;
 
@@ -19,7 +22,9 @@ const _euler = new THREE.Euler(0, 0, 0, "YXZ");
 
 function orbitStandoffUnits(config: PlanetConfig): number {
   const radiusScale =
-    config.id === "sun" || config.radius >= OVERSIZED_BODY_RADIUS_UNITS
+    config.id === "sun"
+      ? SUN_ORBIT_VIEW_RADIUS_SCALE
+      : config.radius >= OVERSIZED_BODY_RADIUS_UNITS
       ? OVERSIZED_BODY_ORBIT_VIEW_RADIUS_SCALE
       : ORBIT_VIEW_RADIUS_SCALE;
 

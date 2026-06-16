@@ -68,6 +68,7 @@ import {
   scenicTransitSpeed,
   scenicTransitSpeedEnvelope,
 } from "@/lib/scenicTransit";
+import { RENDER_FRAME_PRIORITY } from "@/lib/renderFramePriority";
 
 const ARRIVAL_SPEED = BASE_MAX_SPEED * 4;
 
@@ -575,7 +576,7 @@ export function NavigationController({
         clearAutoNavigation();
       }
     }
-  });
+  }, RENDER_FRAME_PRIORITY.controls);
 
   return null;
 }

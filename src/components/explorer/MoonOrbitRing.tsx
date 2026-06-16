@@ -6,6 +6,7 @@ import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
 import { absoluteToRenderSpace } from "@/lib/coordinates/frame";
 import { sampleMoonOrbitPath } from "@/lib/astronomy/moonEphemeris";
+import { RENDER_FRAME_PRIORITY } from "@/lib/renderFramePriority";
 
 export function MoonOrbitRing() {
   const renderPointsRef = useRef<THREE.Vector3[]>([]);
@@ -26,7 +27,7 @@ export function MoonOrbitRing() {
     for (let i = 0; i < absolutePoints.length; i += 1) {
       absoluteToRenderSpace(absolutePoints[i], renderPointsRef.current[i]);
     }
-  });
+  }, RENDER_FRAME_PRIORITY.bodies);
 
   const linePoints =
     renderPointsRef.current.length >= 2

@@ -11,11 +11,3 @@ export function resetLightspeedState() {
   lightspeedState.intensity = 0;
   lightspeedState.ludicrous = false;
 }
-
-/** @deprecated use lightspeedState */
-export const warpState = lightspeedState;
-
-/** @deprecated */
-export function resetWarpState() {
-  resetLightspeedState();
-}

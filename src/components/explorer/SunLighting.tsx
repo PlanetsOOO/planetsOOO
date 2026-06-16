@@ -4,6 +4,7 @@ import { useRef } from "react";
 import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
 import { getRenderClipPlanes } from "@/lib/coordinates/frame";
+import { RENDER_FRAME_PRIORITY } from "@/lib/renderFramePriority";
 import { getSunWorldPosition } from "@/lib/viewerState";
 
 const sunWorld = new THREE.Vector3();
@@ -18,7 +19,7 @@ export function SunLighting() {
     lightRef.current.position.copy(sunWorld);
     const { far } = getRenderClipPlanes();
     lightRef.current.shadow.camera.far = far;
-  });
+  }, RENDER_FRAME_PRIORITY.bodies);
 
   return (
     <>

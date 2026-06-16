@@ -18,6 +18,7 @@ import { EARTH_LANDING_VIEW_RATIO, EARTH_SURFACE_RATIO } from "@/data/earthAppro
 import { getPlanet } from "@/data/planets";
 import { applyCameraAngles } from "@/lib/navigation";
 import { steerToward } from "@/lib/flightPhysics";
+import { RENDER_FRAME_PRIORITY } from "@/lib/renderFramePriority";
 import { viewerPosition } from "@/lib/viewerState";
 
 interface EarthApproachControllerProps {
@@ -150,7 +151,7 @@ export function EarthApproachController({
       pitchRef.current,
       rollRef.current,
     );
-  });
+  }, RENDER_FRAME_PRIORITY.controls);
 
   return null;
 }

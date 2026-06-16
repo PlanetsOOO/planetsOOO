@@ -31,6 +31,7 @@ import {
   applyCameraAngles,
   cameraAnglesFromPosition,
 } from "@/lib/navigation";
+import { RENDER_FRAME_PRIORITY } from "@/lib/renderFramePriority";
 import { getSimulationDate } from "@/lib/simulationTime";
 import { applySpawnView, viewerPosition } from "@/lib/viewerState";
 
@@ -214,7 +215,7 @@ export function IdleOrbitController({
     yawRef.current = yaw;
     pitchRef.current = pitch;
     applyCameraAngles(camera, yaw, pitch, rollRef.current);
-  });
+  }, RENDER_FRAME_PRIORITY.controls);
 
   return null;
 }

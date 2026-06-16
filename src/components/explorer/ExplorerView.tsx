@@ -94,6 +94,26 @@ function NavigationHint() {
   );
 }
 
+function ExtensionMenuLink() {
+  return (
+    <a
+      href="/extension"
+      className="fixed bottom-5 right-5 z-30 flex h-8 w-8 items-center justify-center rounded-full border border-white/10 bg-black/25 text-zinc-500 backdrop-blur-sm transition hover:border-sky-300/30 hover:text-sky-200 focus:outline-none focus-visible:ring-1 focus-visible:ring-sky-300/50"
+      aria-label="Get the Orbit Chrome extension"
+      title="Get the Orbit Chrome extension"
+    >
+      <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" aria-hidden="true">
+        <path
+          d="M9 3h6v4h4v6h-4v8H9v-8H5V7h4V3Z"
+          stroke="currentColor"
+          strokeWidth="1.5"
+          strokeLinejoin="round"
+        />
+      </svg>
+    </a>
+  );
+}
+
 function ExplorerShell() {
   const { navigationActive } = useExplorer();
   const mobileLandscape = useMobileLandscape();
@@ -116,6 +136,7 @@ function ExplorerShell() {
       {!screensaver && <PlanetPanel />}
       {!screensaver && <GuideLog />}
       {!screensaver && <NavigationHint />}
+      {!screensaver && <ExtensionMenuLink />}
     </main>
   );
 }

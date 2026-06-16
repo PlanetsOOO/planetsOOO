@@ -42,8 +42,15 @@ export default function SolarSystemCanvas() {
   }, [screensaver]);
 
   useEffect(() => {
-    setWebglOk(hasWebGLSupport());
-    setClientReady(true);
+    let cancelled = false;
+    queueMicrotask(() => {
+      if (cancelled) return;
+      setWebglOk(hasWebGLSupport());
+      setClientReady(true);
+    });
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   useEffect(() => {

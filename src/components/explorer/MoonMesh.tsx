@@ -20,6 +20,7 @@ import { createCircularSpriteMaterial } from "@/lib/materials/circularSprite";
 import {
   computeLodLevel,
   getAnisotropyForLod,
+  shouldUseImpostor,
   type LodLevel,
 } from "@/lib/planetLod";
 import { shouldRunThrottled } from "@/lib/throttledTick";
@@ -29,6 +30,7 @@ import {
   absoluteToRenderSpace,
   moonRenderRadius,
 } from "@/lib/coordinates/frame";
+import { RENDER_FRAME_PRIORITY } from "@/lib/renderFramePriority";
 import { BodyLabel } from "./BodyLabel";
 
 const absolutePos = new THREE.Vector3();
@@ -71,6 +73,7 @@ export function MoonMesh() {
 
   const lodRef = useRef<LodLevel>(0);
   const segmentsRef = useRef(16);
+  const showImpostorRef = useRef(false);
   const applyLod = (segments: number, level: LodLevel) => {
     if (segmentsRef.current === segments || !bodyRef.current) return;
     segmentsRef.current = segments;
@@ -116,7 +119,12 @@ export function MoonMesh() {
       cam.fov,
       size.height,
     );
-    const subPixel = px < 2.5 && !isNavTarget && !isHighlighted;
+    const subPixel = shouldUseImpostor(
+      px,
+      showImpostorRef.current,
+      isNavTarget || isHighlighted,
+    );
+    showImpostorRef.current = subPixel;
 
     bodyRef.current.visible = !subPixel || isHighlighted;
     if (impostorRef.current) {
@@ -134,7 +142,7 @@ export function MoonMesh() {
       visualScaleRef.current.scale.setScalar(sizeScale);
     }
 
-  });
+  }, RENDER_FRAME_PRIORITY.bodies);
 
   useEffect(() => {
     const body = bodyRef.current;

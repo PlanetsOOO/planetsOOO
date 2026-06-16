@@ -81,6 +81,66 @@ form {
   gap: 0.5rem;
 }
 
+.flight-section {
+  display: grid;
+  gap: 0.35rem;
+  border-radius: 0.5rem;
+  transition:
+    opacity 160ms ease,
+    filter 160ms ease;
+}
+
+.flight-section.is-basic {
+  opacity: 0.42;
+  filter: grayscale(0.35);
+}
+
+.flight-section.is-basic select {
+  cursor: not-allowed;
+}
+
+.premium-notice {
+  display: none;
+  margin: -0.1rem 0 0;
+  color: #a1a1aa;
+  font-size: 0.66rem;
+  line-height: 1.35;
+}
+
+.flight-section.is-basic .premium-notice {
+  display: block;
+}
+
+.premium-notice a {
+  color: #93c5fd;
+  text-decoration: none;
+}
+
+.premium-notice a:hover {
+  text-decoration: underline;
+}
+
+.flight-controls {
+  display: grid;
+  gap: 0.15rem;
+  border: 1px solid #18181b;
+  border-radius: 0.45rem;
+  padding: 0.45rem 0.5rem;
+  color: #71717a;
+  font-size: 0.6rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.flight-controls p {
+  margin: 0;
+  color: #a1a1aa;
+  font-size: 0.66rem;
+  letter-spacing: normal;
+  line-height: 1.45;
+  text-transform: none;
+}
+
 .display-list {
   display: grid;
   gap: 0.25rem;

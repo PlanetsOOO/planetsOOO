@@ -34,9 +34,11 @@ import {
 import {
   computeLodLevel,
   getAnisotropyForLod,
+  shouldUseImpostor,
   type LodLevel,
 } from "@/lib/planetLod";
 import { shouldRunThrottled } from "@/lib/throttledTick";
+import { RENDER_FRAME_PRIORITY } from "@/lib/renderFramePriority";
 import { angularDiameterPixels } from "@/lib/astronomy/scale";
 import { setTargetPosition } from "@/lib/targetPositions";
 import { getSimulationDate } from "@/lib/simulationTime";
@@ -203,7 +205,11 @@ export function PlanetMesh({ config }: PlanetMeshProps) {
       cam.fov,
       size.height,
     );
-    const subPixel = px < 2.5 && !isNavTarget && !isHighlighted;
+    const subPixel = shouldUseImpostor(
+      px,
+      showImpostorRef.current,
+      isNavTarget || isHighlighted,
+    );
     showImpostorRef.current = subPixel;
     impostorSizeRef.current = Math.max(6, px);
 
@@ -307,7 +313,7 @@ export function PlanetMesh({ config }: PlanetMeshProps) {
         updateEarthSunDirection(bodyMatRef.current, sunDir);
       }
     }
-  });
+  }, RENDER_FRAME_PRIORITY.bodies);
 
   useEffect(() => {
     const body = bodyRef.current;

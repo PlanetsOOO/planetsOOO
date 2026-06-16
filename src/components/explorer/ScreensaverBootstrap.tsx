@@ -22,6 +22,19 @@ function notifyScreensaverFlightMode(active: boolean): void {
   );
 }
 
+function notifyScreensaverSpeedTracker(
+  active: boolean,
+  speedKmPerSec: number,
+  lightspeedMultiple: number,
+  speedUnit: "kph" | "mph",
+): void {
+  window.dispatchEvent(
+    new CustomEvent("orbit-screensaver-speed", {
+      detail: { active, speedKmPerSec, lightspeedMultiple, speedUnit },
+    }),
+  );
+}
+
 function requestCanvasPointerLock(): void {
   const canvas = document.querySelector("canvas") as HTMLCanvasElement | null;
   canvas?.focus?.({ preventScroll: true });
@@ -41,16 +54,36 @@ export function ScreensaverBootstrap() {
     returnToDiscoveryScenic,
     showLabels,
     setShowLabels,
+    displaySpeedKmPerSec,
+    displayLightspeedMultiple,
+    speedUnit,
   } = useExplorer();
   const flightEnteredRef = useRef(false);
   const flightActiveRef = useRef(false);
   const returnTargetRef = useRef<NavTargetId | null>(null);
   const showLabelsRef = useRef(showLabels);
   const flightIdleTimerRef = useRef<number | null>(null);
+  const ignoreLabelKeyupRef = useRef(false);
+  const displaySpeedKmPerSecRef = useRef(displaySpeedKmPerSec);
+  const displayLightspeedMultipleRef = useRef(displayLightspeedMultiple);
+  const speedUnitRef = useRef(speedUnit);
 
   useEffect(() => {
     showLabelsRef.current = showLabels;
   }, [showLabels]);
+
+  useEffect(() => {
+    if (!screensaver) return;
+    displaySpeedKmPerSecRef.current = displaySpeedKmPerSec;
+    displayLightspeedMultipleRef.current = displayLightspeedMultiple;
+    speedUnitRef.current = speedUnit;
+    notifyScreensaverSpeedTracker(
+      flightActiveRef.current,
+      displaySpeedKmPerSec,
+      displayLightspeedMultiple,
+      speedUnit,
+    );
+  }, [screensaver, displaySpeedKmPerSec, displayLightspeedMultiple, speedUnit]);
 
   const startScenicTour = useCallback((force = false) => {
     if (flightEnteredRef.current && !force) return;
@@ -101,13 +134,14 @@ export function ScreensaverBootstrap() {
       flightActiveRef.current = false;
       flightEnteredRef.current = false;
       notifyScreensaverFlightMode(false);
+      notifyScreensaverSpeedTracker(false, 0, 0, speedUnitRef.current);
       clearFlightIdleTimer();
       setNavigationActive(false);
+      showLabelsRef.current = false;
+      setShowLabels(false);
       if (document.pointerLockElement) {
         document.exitPointerLock();
       }
-      showLabelsRef.current = false;
-      setShowLabels(false);
 
       const returnTarget = returnTargetRef.current;
       returnToDiscoveryScenic(returnTarget);
@@ -134,6 +168,12 @@ export function ScreensaverBootstrap() {
       flightEnteredRef.current = true;
       flightActiveRef.current = true;
       notifyScreensaverFlightMode(true);
+      notifyScreensaverSpeedTracker(
+        true,
+        displaySpeedKmPerSecRef.current,
+        displayLightspeedMultipleRef.current,
+        speedUnitRef.current,
+      );
       idleOrbitState.active = false;
       setDiscoveryAutopilotActive(false);
       setNavigationActive(true);
@@ -153,7 +193,7 @@ export function ScreensaverBootstrap() {
       const modified = e.metaKey || e.ctrlKey || e.altKey;
 
       if (!flightEnteredRef.current) {
-        if (e.code === config.enterFlightKey && !modified) {
+        if (config.flightEnabled && e.code === config.enterFlightKey && !modified) {
           if (e.repeat) return;
           e.preventDefault();
           e.stopImmediatePropagation();
@@ -167,7 +207,7 @@ export function ScreensaverBootstrap() {
         return;
       }
 
-      if (e.code === config.exitKey && !modified) {
+      if (e.key === "Escape" || (e.code === config.exitKey && !modified)) {
         e.preventDefault();
         e.stopImmediatePropagation();
         if (e.repeat) return;
@@ -175,7 +215,7 @@ export function ScreensaverBootstrap() {
         return;
       }
 
-      if (e.code === config.enterFlightKey && !modified) {
+      if (config.flightEnabled && e.code === config.enterFlightKey && !modified) {
         if (e.repeat) return;
         e.preventDefault();
         e.stopImmediatePropagation();
@@ -186,6 +226,7 @@ export function ScreensaverBootstrap() {
       if (e.key.toLowerCase() === "l" && !modified) {
         e.preventDefault();
         e.stopImmediatePropagation();
+        ignoreLabelKeyupRef.current = true;
         toggleLabels();
         markFlightActivity();
         return;
@@ -205,6 +246,10 @@ export function ScreensaverBootstrap() {
     };
 
     const onFlightActivity = () => {
+      if (ignoreLabelKeyupRef.current) {
+        ignoreLabelKeyupRef.current = false;
+        return;
+      }
       markFlightActivity();
     };
 
@@ -236,6 +281,25 @@ export function ScreensaverBootstrap() {
       exitScreensaver();
     };
 
+    let hadScreensaverPointerLock = false;
+    const onPointerLockChange = () => {
+      if (!flightEnteredRef.current) {
+        hadScreensaverPointerLock = false;
+        return;
+      }
+
+      const canvas = document.querySelector("canvas");
+      if (document.pointerLockElement === canvas) {
+        hadScreensaverPointerLock = true;
+        markFlightActivity();
+        return;
+      }
+
+      if (hadScreensaverPointerLock) {
+        returnToScenicTour();
+      }
+    };
+
     window.addEventListener("keydown", onKeyDown, true);
     window.addEventListener("keyup", onFlightActivity, true);
     window.addEventListener("pointerdown", onPointerExit, true);
@@ -244,6 +308,7 @@ export function ScreensaverBootstrap() {
     window.addEventListener("contextmenu", onPointerExit, true);
     window.addEventListener("mousemove", onFlightMouseMove, true);
     window.addEventListener("wheel", onFlightWheel, true);
+    document.addEventListener("pointerlockchange", onPointerLockChange);
 
     return () => {
       clearFlightIdleTimer();
@@ -255,9 +320,11 @@ export function ScreensaverBootstrap() {
       window.removeEventListener("contextmenu", onPointerExit, true);
       window.removeEventListener("mousemove", onFlightMouseMove, true);
       window.removeEventListener("wheel", onFlightWheel, true);
+      document.removeEventListener("pointerlockchange", onPointerLockChange);
     };
   }, [
     screensaver,
+    config.flightEnabled,
     config.enterFlightKey,
     config.exitKey,
     setDiscoveryAutopilotActive,

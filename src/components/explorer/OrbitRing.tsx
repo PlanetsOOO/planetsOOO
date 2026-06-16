@@ -6,6 +6,7 @@ import { useFrame } from "@react-three/fiber";
 import type { PlanetId } from "@/data/planets";
 import { absoluteToRenderSpace } from "@/lib/coordinates/frame";
 import { sampleOrbitPath } from "@/lib/astronomy/ephemeris";
+import { RENDER_FRAME_PRIORITY } from "@/lib/renderFramePriority";
 import * as THREE from "three";
 
 interface OrbitRingProps {
@@ -32,7 +33,7 @@ export function OrbitRing({ planetId }: OrbitRingProps) {
     for (let i = 0; i < absolutePoints.length; i += 1) {
       absoluteToRenderSpace(absolutePoints[i], renderPointsRef.current[i]);
     }
-  });
+  }, RENDER_FRAME_PRIORITY.bodies);
 
   const linePoints =
     renderPointsRef.current.length >= 2

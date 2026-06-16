@@ -152,6 +152,7 @@ export function computeEarthApproachDetail(
   distanceRatio: number,
 ): EarthApproachDetail {
   const radius = getEarthBodyRadius();
+  const active = distanceRatio <= EARTH_APPROACH_LAYERS[0].outerRatio;
   const r = THREE.MathUtils.clamp(
     distanceRatio,
     EARTH_SURFACE_RATIO,
@@ -185,7 +186,7 @@ export function computeEarthApproachDetail(
   const altitudeKm = Math.max(0, (r - 1) * radius * 1_000);
 
   return {
-    active: r <= EARTH_APPROACH_LAYERS[0].outerRatio,
+    active,
     layer,
     layerConfig,
     nextLayerConfig,

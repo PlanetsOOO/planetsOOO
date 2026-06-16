@@ -35,56 +35,75 @@
           <div id="displayList" class="display-list">Loading displays…</div>
         </fieldset>
 
-        <div class="grid">
-          <label class="field">
-            <span>Flight key</span>
-            <select id="flightKey" name="flightKey">
-              <option value="Backquote">`</option>
-              <option value="Semicolon">;</option>
-              <option value="BracketLeft">[</option>
-              <option value="BracketRight">]</option>
-              <option value="Backslash">\</option>
-              <option value="Quote">'</option>
-              <option value="Comma">,</option>
-              <option value="Period">.</option>
-              <option value="Slash">/</option>
-              <option value="Minus">-</option>
-              <option value="Equal">=</option>
-              <option value="Digit0">0</option>
-              <option value="Digit9">9</option>
-              <option value="F12">F12</option>
-            </select>
-          </label>
+        <label class="row">
+          <input
+            type="checkbox"
+            id="allowMultipleDisplays"
+            name="allowMultipleDisplays"
+          />
+          <span>Use all selected displays</span>
+        </label>
 
-          <label class="field">
-            <span>Exit flight</span>
-            <select id="exitKey" name="exitKey">
-              <option value="Backquote">`</option>
-              <option value="Semicolon">;</option>
-              <option value="BracketLeft">[</option>
-              <option value="BracketRight">]</option>
-              <option value="Backslash">\</option>
-              <option value="Quote">'</option>
-              <option value="Comma">,</option>
-              <option value="Period">.</option>
-              <option value="Slash">/</option>
-              <option value="Minus">-</option>
-              <option value="Equal">=</option>
-              <option value="Digit0">0</option>
-              <option value="Digit9">9</option>
-              <option value="F12">F12</option>
-            </select>
-          </label>
-        </div>
+        <section id="flightSection" class="flight-section" aria-label="Flight mode">
+          <div class="grid">
+            <label class="field">
+              <span>Flight key</span>
+              <select id="flightKey" name="flightKey">
+                <option value="Backquote">`</option>
+                <option value="Semicolon">;</option>
+                <option value="BracketLeft">[</option>
+                <option value="BracketRight">]</option>
+                <option value="Backslash">\</option>
+                <option value="Quote">'</option>
+                <option value="Comma">,</option>
+                <option value="Period">.</option>
+                <option value="Slash">/</option>
+                <option value="Minus">-</option>
+                <option value="Equal">=</option>
+                <option value="Digit0">0</option>
+                <option value="Digit9">9</option>
+                <option value="F12">F12</option>
+              </select>
+            </label>
+
+            <label class="field">
+              <span>Exit flight</span>
+              <select id="exitKey" name="exitKey">
+                <option value="Backquote">`</option>
+                <option value="Semicolon">;</option>
+                <option value="BracketLeft">[</option>
+                <option value="BracketRight">]</option>
+                <option value="Backslash">\</option>
+                <option value="Quote">'</option>
+                <option value="Comma">,</option>
+                <option value="Period">.</option>
+                <option value="Slash">/</option>
+                <option value="Minus">-</option>
+                <option value="Equal">=</option>
+                <option value="Digit0">0</option>
+                <option value="Digit9">9</option>
+                <option value="F12">F12</option>
+              </select>
+            </label>
+          </div>
+
+          <p id="premiumNotice" class="premium-notice">
+            Flight mode is available with
+            <a id="premiumLink" href="https://www.planets.ooo/premium">Premium</a>
+            only.
+          </p>
+
+          <div class="flight-controls">
+            <span>Controls</span>
+            <p>
+              WASD move · Mouse look · Shift+W lightspeed · Shift+W+F ludicrous · Space brake · L labels · Esc exit flight
+            </p>
+          </div>
+        </section>
 
         <label class="row">
           <input type="checkbox" id="closeOnActive" name="closeOnActive" />
           <span>Close when computer becomes active</span>
-        </label>
-
-        <label class="row">
-          <input type="checkbox" id="restoreWindowState" name="restoreWindowState" />
-          <span>Restore window state on close</span>
         </label>
       </form>
 
