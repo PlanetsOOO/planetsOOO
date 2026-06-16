@@ -1,0 +1,177 @@
+:root {
+  --background: #030508;
+  --foreground: #e4e4e7;
+  color-scheme: dark;
+  background: var(--background);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  overflow: hidden;
+  background: var(--background);
+  color: var(--foreground);
+  font-family:
+    ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+    sans-serif;
+}
+
+html.screensaver-mode,
+html.screensaver-mode body {
+  cursor: none;
+}
+
+html.screensaver-mode * {
+  cursor: none !important;
+}
+
+canvas {
+  display: block;
+}
+
+/* Minimal Tailwind utility shim for the screensaver-only React explorer path. */
+.relative {
+  position: relative;
+}
+
+.absolute {
+  position: absolute;
+}
+
+.fixed {
+  position: fixed;
+}
+
+.inset-0 {
+  inset: 0;
+}
+
+.bottom-5 {
+  bottom: 1.25rem;
+}
+
+.left-1\/2 {
+  left: 50%;
+}
+
+.z-0 {
+  z-index: 0;
+}
+
+.z-\[100\] {
+  z-index: 100;
+}
+
+.h-screen {
+  height: 100vh;
+  height: 100dvh;
+}
+
+.w-full {
+  width: 100%;
+}
+
+.max-w-\[90vw\] {
+  max-width: 90vw;
+}
+
+.overflow-hidden {
+  overflow: hidden;
+}
+
+.bg-\[\#030508\] {
+  background: #030508;
+}
+
+.-translate-x-1\/2 {
+  transform: translateX(-50%);
+}
+
+.text-center {
+  text-align: center;
+}
+
+.font-mono {
+  font-family:
+    ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono",
+    monospace;
+}
+
+.text-\[10px\] {
+  font-size: 10px;
+}
+
+.text-\[9px\] {
+  font-size: 9px;
+}
+
+.tracking-\[0\.2em\] {
+  letter-spacing: 0.2em;
+}
+
+.uppercase {
+  text-transform: uppercase;
+}
+
+.whitespace-nowrap {
+  white-space: nowrap;
+}
+
+.border-0 {
+  border: 0;
+}
+
+.bg-transparent {
+  background: transparent;
+}
+
+.p-0 {
+  padding: 0;
+}
+
+.cursor-pointer {
+  cursor: pointer;
+}
+
+.text-\[\#b8cce0\] {
+  color: #b8cce0;
+}
+
+.text-\[\#8a9bb0\] {
+  color: #8a9bb0;
+}
+
+.text-zinc-600\/80 {
+  color: rgba(82, 82, 91, 0.8);
+}
+
+.opacity-65 {
+  opacity: 0.65;
+}
+
+.opacity-32 {
+  opacity: 0.32;
+}
+
+.pointer-events-none {
+  pointer-events: none;
+}
+
+.select-none {
+  user-select: none;
+}
+
+.cursor-none {
+  cursor: none;
+}
+
+.cursor-default {
+  cursor: default;
+}

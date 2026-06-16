@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, type SyntheticEvent } from "react";
 import { useExplorer } from "@/context/ExplorerContext";
 import { discoveryAutopilotState } from "@/lib/discoveryAutopilot";
 import { PlanetSearch } from "./PlanetSearch";
@@ -50,6 +50,9 @@ export function OptionsMenu() {
   const scenicTourActive =
     discoveryAutopilotActive || discoveryAutopilotState.active;
   const hideChrome = scenicTourActive && !scenicChromeVisible;
+  const stopMenuEvent = (event: SyntheticEvent) => {
+    event.stopPropagation();
+  };
 
   return (
     <div
@@ -76,6 +79,12 @@ export function OptionsMenu() {
       {menuOpen && (
         <div
           data-explorer-menu
+          onPointerDown={stopMenuEvent}
+          onMouseDown={stopMenuEvent}
+          onClick={stopMenuEvent}
+          onWheel={stopMenuEvent}
+          onKeyDown={stopMenuEvent}
+          onKeyUp={stopMenuEvent}
           className="absolute right-0 top-full mt-2 w-56 rounded-lg border border-white/8 bg-black/70 backdrop-blur-md p-3 shadow-xl max-h-[85vh] overflow-y-auto"
         >
           <PlanetSearch />

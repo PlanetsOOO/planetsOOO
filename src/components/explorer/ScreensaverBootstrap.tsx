@@ -14,6 +14,17 @@ const FLIGHT_IDLE_RETURN_MS = 15_000;
 const FLIGHT_IDLE_MOUSE_EPSILON = 2;
 const FLIGHT_IDLE_WHEEL_EPSILON = 1;
 
+type ChromeRuntimeLike = {
+  runtime?: {
+    sendMessage?: (message: unknown) => void;
+  };
+};
+
+function getChromeRuntime(): ChromeRuntimeLike["runtime"] | undefined {
+  return (globalThis as typeof globalThis & { chrome?: ChromeRuntimeLike }).chrome
+    ?.runtime;
+}
+
 function notifyScreensaverFlightMode(active: boolean): void {
   window.dispatchEvent(
     new CustomEvent("orbit-screensaver-flight-mode", {
@@ -186,6 +197,7 @@ export function ScreensaverBootstrap() {
       if (document.fullscreenElement) {
         void document.exitFullscreen?.().catch(() => {});
       }
+      getChromeRuntime()?.sendMessage?.({ type: "close" });
       window.close();
     };
 

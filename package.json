@@ -9,6 +9,7 @@
     "start": "next start",
     "lint": "eslint",
     "build:extension-offline": "node scripts/build-extension-offline.mjs",
+    "package:extension": "node scripts/build-extension-offline.mjs && node scripts/package-extension.mjs",
     "textures": "bash scripts/download-textures.sh",
     "sync:celestial": "bash scripts/sync-celestial-data.sh",
     "sync:iss": "node scripts/sync-iss-tle.mjs",

@@ -111,6 +111,8 @@ Keep the last ~10 entries. Delete rows that no longer teach you anything.
 | 2026-06-09 | Premium needed a payment path before accounts exist | Stripe Checkout + extension entitlement handoff | Check test checkout unlocks Premium |
 | 2026-06-14 | Premium needed unique offline value | Packaged offline flight controls behind Premium gate | Check offline preview with Premium flight key |
 | 2026-06-14 | Screensaver close could reveal a second stale window | Query and close every matching screensaver tab | Check one input closes all screensaver windows |
+| 2026-06-16 | Premium offline ludicrous speed was not physical `100× c` | Reused canonical web `c` / ludicrous constants | Check offline Premium Shift+W+F HUD reaches `100× c` |
+| 2026-06-16 | Orbit/menu toggles could destabilize flight controls | Anchor-stable orbit paths; ignore menu events in flight input | Check orbit paths while flying with menu open |
 
 ---
 

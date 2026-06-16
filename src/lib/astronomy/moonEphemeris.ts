@@ -156,19 +156,22 @@ export function getMoonRotationAngle(date = getSimulationDate()): number {
   return getGeocentricMoonEclipticKm(getMoonEphemerisDate(date)).lonDeg * DEG;
 }
 
-/** Sample one lunar orbit around Earth for path visualization. */
-export function sampleMoonOrbitPath(segments: number): Float32Array {
+/** Sample one lunar orbit around the current Earth position for path visualization. */
+export function sampleMoonOrbitPath(
+  segments: number,
+  date = getSimulationDate(),
+): Float32Array {
   const periodDays = MOON_SIDEREAL_PERIOD_DAYS;
-  const epoch = J2000;
+  const epochMs = date.getTime();
   const out = new Float32Array((segments + 1) * 3);
   const geo = { x: 0, y: 0, z: 0, lonDeg: 0, latRad: 0, distanceKm: 0 };
+  getHeliocentricPosition("earth", 0, date, earthHelio);
 
   for (let i = 0; i <= segments; i += 1) {
-    const days = (i / segments) * periodDays;
-    const jd = epoch + days;
-    const date = new Date((jd - 2_440_587.5) * 86_400_000);
-    getGeocentricMoonEclipticKm(date, geo);
-    getHeliocentricPosition("earth", 0, date, earthHelio);
+    const sampleDate = new Date(
+      epochMs + (i / segments) * periodDays * 86_400_000,
+    );
+    getGeocentricMoonEclipticKm(sampleDate, geo);
     out[i * 3] = earthHelio.x + geo.x / KM_PER_UNIT;
     out[i * 3 + 1] = earthHelio.y + geo.y / KM_PER_UNIT;
     out[i * 3 + 2] = earthHelio.z + geo.z / KM_PER_UNIT;

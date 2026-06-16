@@ -18,6 +18,8 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "extension/screensaver.js",
+    "extension/screensaver-premium.js",
+    "extension/screensaver-react.js",
     "next-env.d.ts",
   ]),
 ]);

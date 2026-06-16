@@ -1,8 +1,8 @@
 "use client";
 
-import { useFrame, useThree } from "@react-three/fiber";
+import { useFrame } from "@react-three/fiber";
 import { Line } from "@react-three/drei";
-import { useRef } from "react";
+import { useMemo, useRef } from "react";
 import * as THREE from "three";
 import { isMoonTarget, type NavTargetId } from "@/data/navigationTargets";
 import { getPlanet } from "@/data/planets";
@@ -10,7 +10,10 @@ import { getMoonHeliocentricPosition } from "@/lib/astronomy/moonEphemeris";
 import { getSimulationDate } from "@/lib/simulationTime";
 import { useExplorer } from "@/context/ExplorerContext";
 import { getTargetPosition } from "@/lib/targetPositions";
-import { absoluteToRenderSpace } from "@/lib/coordinates/frame";
+import {
+  AU_PER_LEGACY_UNIT,
+  floatingOriginState,
+} from "@/lib/coordinates/frame";
 import { RENDER_FRAME_PRIORITY } from "@/lib/renderFramePriority";
 
 function resolveAbsolute(id: NavTargetId): THREE.Vector3 {
@@ -26,38 +29,38 @@ function resolveAbsolute(id: NavTargetId): THREE.Vector3 {
 
 export function RoutePathLine() {
   const { routeWaypoints, routeActive } = useExplorer();
-  const points = useRef<THREE.Vector3[]>([]);
-  const { invalidate } = useThree();
+  const groupRef = useRef<THREE.Group>(null);
+
+  const linePoints = useMemo(() => {
+    if (!routeActive || routeWaypoints.length < 2) return [];
+    return routeWaypoints.map((id) =>
+      resolveAbsolute(id).multiplyScalar(AU_PER_LEGACY_UNIT),
+    );
+  }, [routeActive, routeWaypoints]);
 
   useFrame(() => {
-    if (!routeActive || routeWaypoints.length < 2) {
-      points.current = [];
+    if (!groupRef.current) {
       return;
     }
-    points.current = routeWaypoints.map((id) => {
-      const absolute = resolveAbsolute(id);
-      return absoluteToRenderSpace(absolute, new THREE.Vector3());
-    });
-    invalidate();
+    groupRef.current.position
+      .copy(floatingOriginState.anchor)
+      .multiplyScalar(-AU_PER_LEGACY_UNIT);
   }, RENDER_FRAME_PRIORITY.bodies);
 
-  if (!routeActive || routeWaypoints.length < 2) return null;
-
-  const linePoints =
-    points.current.length >= 2
-      ? points.current
-      : routeWaypoints.map((id) => resolveAbsolute(id));
+  if (!routeActive || linePoints.length < 2) return null;
 
   return (
-    <Line
-      points={linePoints}
-      color="#5b9fff"
-      lineWidth={1}
-      transparent
-      opacity={0.45}
-      dashed
-      dashSize={2000}
-      gapSize={1200}
-    />
+    <group ref={groupRef}>
+      <Line
+        points={linePoints}
+        color="#5b9fff"
+        lineWidth={1}
+        transparent
+        opacity={0.45}
+        dashed
+        dashSize={0.015}
+        gapSize={0.009}
+      />
+    </group>
   );
 }

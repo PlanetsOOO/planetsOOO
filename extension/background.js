@@ -23,6 +23,8 @@ const FULLSCREEN_RECOVERY_DELAY_MS = 450;
 const FULLSCREEN_REQUEST_COOLDOWN_MS = 2500;
 const ONLINE_PROBE_TIMEOUT_MS = 2500;
 const OFFLINE_SCREENSAVER_PAGE = "screensaver.html";
+const PREMIUM_OFFLINE_SCREENSAVER_PAGE = "screensaver-premium.html";
+const REACT_OFFLINE_SCREENSAVER_PAGE = "screensaver-react.html";
 const PREMIUM_VERIFY_PATH = "/api/premium/verify";
 const PREMIUM_WINDOW_WIDTH = 420;
 const PREMIUM_WINDOW_FALLBACK_HEIGHT = 760;
@@ -296,7 +298,9 @@ function isScreensaverUrl(url) {
     const extensionOrigin = new URL(chrome.runtime.getURL("")).origin;
     if (
       parsed.origin === extensionOrigin &&
-      parsed.pathname.endsWith(`/${OFFLINE_SCREENSAVER_PAGE}`)
+      (parsed.pathname.endsWith(`/${OFFLINE_SCREENSAVER_PAGE}`) ||
+        parsed.pathname.endsWith(`/${PREMIUM_OFFLINE_SCREENSAVER_PAGE}`) ||
+        parsed.pathname.endsWith(`/${REACT_OFFLINE_SCREENSAVER_PAGE}`))
     ) {
       return true;
     }
@@ -422,9 +426,13 @@ function buildPlanetsUrl(settings) {
 }
 
 function buildOfflineScreensaverUrl(settings) {
-  const url = new URL(chrome.runtime.getURL(OFFLINE_SCREENSAVER_PAGE));
+  const premium = isPremiumPlan(settings);
+  // Both tiers use the shared React/R3F scenic explorer offline; Premium keeps
+  // manual flight enabled, while Basic receives scenic tour only.
+  const page = REACT_OFFLINE_SCREENSAVER_PAGE;
+  const url = new URL(chrome.runtime.getURL(page));
   url.searchParams.set("offline", "1");
-  url.searchParams.set("flight", isPremiumPlan(settings) ? "1" : "0");
+  url.searchParams.set("flight", premium ? "1" : "0");
   url.searchParams.set("flightKey", settings.flightKey || DEFAULTS.flightKey);
   url.searchParams.set("exitKey", settings.exitKey || settings.flightKey || DEFAULTS.exitKey);
   return url.toString();

@@ -121,3 +121,27 @@ body {
 .offline-flight-message.is-visible {
   opacity: 1;
 }
+
+.offline-body-label {
+  position: fixed;
+  left: 50%;
+  top: 1.6rem;
+  z-index: 6;
+  margin: 0;
+  color: rgba(226, 232, 240, 0.34);
+  font-family:
+    ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono",
+    monospace;
+  font-size: 0.74rem;
+  letter-spacing: 0.42em;
+  opacity: 0;
+  pointer-events: none;
+  text-transform: uppercase;
+  transform: translateX(-50%);
+  transition: opacity 600ms ease;
+  user-select: none;
+}
+
+.offline-body-label.is-visible {
+  opacity: 1;
+}

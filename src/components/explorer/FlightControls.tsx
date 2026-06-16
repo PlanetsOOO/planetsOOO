@@ -63,6 +63,18 @@ function isScenicAutopilotZoomKey(
   );
 }
 
+function isEditableOrMenuTarget(target: EventTarget | null): boolean {
+  if (!(target instanceof HTMLElement)) return false;
+  if (target.closest("[data-explorer-menu]")) return true;
+  return (
+    target.isContentEditable ||
+    target.tagName === "INPUT" ||
+    target.tagName === "TEXTAREA" ||
+    target.tagName === "SELECT" ||
+    target.tagName === "BUTTON"
+  );
+}
+
 interface FlightControlsProps {
   flightRef: React.MutableRefObject<FlightState>;
   yawRef: React.MutableRefObject<number>;
@@ -139,6 +151,8 @@ export function FlightControls({
     };
 
     const onKeyDown = (e: KeyboardEvent) => {
+      if (isEditableOrMenuTarget(e.target)) return;
+
       const key = e.key.toLowerCase();
       const routeTrip = routeActiveRef.current && autoNavigatingRef.current;
 
@@ -214,6 +228,8 @@ export function FlightControls({
     };
 
     const onKeyUp = (e: KeyboardEvent) => {
+      if (isEditableOrMenuTarget(e.target)) return;
+
       const key = e.key.toLowerCase();
       trackKey(key, false);
       if (e.code === "ShiftLeft" || e.code === "ShiftRight") {
@@ -441,12 +457,11 @@ export function FlightControls({
       yawRef.current,
       pitchRef.current,
       forward.current,
-      rollRef.current,
     );
     rightFromAngles(
       yawRef.current,
       pitchRef.current,
-      rollRef.current,
+      0,
       right.current,
     );
 
