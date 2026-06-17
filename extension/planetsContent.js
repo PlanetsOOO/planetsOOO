@@ -34,19 +34,35 @@ function flightEnabled() {
 }
 
 function closeScreensaver() {
-  void chrome.runtime.sendMessage({ type: "close" });
+  try {
+    void chrome.runtime.sendMessage({ type: "close" });
+  } catch {
+    // Extension context may be reloading.
+  }
 }
 
 function notifyFlightModeEntered() {
-  void chrome.runtime.sendMessage({ type: "screensaver-flight-entered" });
+  try {
+    void chrome.runtime.sendMessage({ type: "screensaver-flight-entered" });
+  } catch {
+    // Extension context may be reloading.
+  }
 }
 
 function notifyFlightModeExited() {
-  void chrome.runtime.sendMessage({ type: "screensaver-flight-exited" });
+  try {
+    void chrome.runtime.sendMessage({ type: "screensaver-flight-exited" });
+  } catch {
+    // Extension context may be reloading.
+  }
 }
 
 function notifyScreensaverReady() {
-  void chrome.runtime.sendMessage({ type: "screensaver-page-ready" });
+  try {
+    void chrome.runtime.sendMessage({ type: "screensaver-page-ready" });
+  } catch {
+    // Extension context may be reloading.
+  }
 }
 
 function formatSpeedMultiple(multiple) {

@@ -5,6 +5,7 @@ import { Suspense, useEffect, useLayoutEffect, useState } from "react";
 import * as THREE from "three";
 import { useExplorer } from "@/context/ExplorerContext";
 import { useCoarsePointer } from "@/hooks/useCoarsePointer";
+import { useDocumentVisible } from "@/hooks/useDocumentVisible";
 import { getRenderClipPlanes } from "@/lib/coordinates/frame";
 import { TextureWarmup } from "@/lib/preloadTextures";
 import { isScreensaverMode } from "@/lib/screensaverConfig";
@@ -32,6 +33,7 @@ function WebGLFallback() {
 export default function SolarSystemCanvas() {
   const { dismissInfo } = useExplorer();
   const isMobile = useCoarsePointer();
+  const documentVisible = useDocumentVisible();
   const screensaver = isScreensaverMode();
   const [clientReady, setClientReady] = useState(screensaver);
   const [webglOk, setWebglOk] = useState(true);
@@ -80,6 +82,7 @@ export default function SolarSystemCanvas() {
   return (
     <div className="absolute inset-0 z-0">
       <Canvas
+        frameloop={documentVisible ? "always" : "never"}
         shadows={!isMobile}
         camera={{
           position: [0, 0, 0],

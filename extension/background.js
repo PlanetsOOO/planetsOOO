@@ -30,6 +30,45 @@ const PREMIUM_WINDOW_WIDTH = 420;
 const PREMIUM_WINDOW_FALLBACK_HEIGHT = 760;
 const PREMIUM_WINDOW_MIN_HEIGHT = 640;
 
+function extensionOrigin() {
+  return new URL(chrome.runtime.getURL("")).origin;
+}
+
+function isExtensionPageSender(sender) {
+  if (!sender?.url) return false;
+  try {
+    return new URL(sender.url).origin === extensionOrigin();
+  } catch {
+    return false;
+  }
+}
+
+function isTrustedScreensaverTab(sender) {
+  const tabUrl = sender?.tab?.url;
+  return Boolean(tabUrl && isScreensaverUrl(tabUrl));
+}
+
+function isTrustedScreensaverSender(sender) {
+  return isExtensionPageSender(sender) || isTrustedScreensaverTab(sender);
+}
+
+function isPopupSender(sender) {
+  if (!isExtensionPageSender(sender)) return false;
+  try {
+    return new URL(sender.url).pathname.endsWith("/popup.html");
+  } catch {
+    return false;
+  }
+}
+
+function sendMessageResponse(sendResponse, payload) {
+  try {
+    sendResponse(payload);
+  } catch {
+    // The caller may have gone away before the async handler finished.
+  }
+}
+
 function isPremiumPlan(settings) {
   return settings.plan === "premium";
 }
@@ -439,20 +478,42 @@ function buildOfflineScreensaverUrl(settings) {
 }
 
 async function onlineScreensaverReachable(url) {
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), ONLINE_PROBE_TIMEOUT_MS);
+  const headController = new AbortController();
+  const headTimeout = setTimeout(
+    () => headController.abort(),
+    ONLINE_PROBE_TIMEOUT_MS,
+  );
+
+  try {
+    const res = await fetch(url, {
+      method: "HEAD",
+      cache: "no-store",
+      signal: headController.signal,
+    });
+    if (res.ok) return true;
+  } catch {
+    // Some hosts reject HEAD — fall back to GET below.
+  } finally {
+    clearTimeout(headTimeout);
+  }
+
+  const getController = new AbortController();
+  const getTimeout = setTimeout(
+    () => getController.abort(),
+    ONLINE_PROBE_TIMEOUT_MS,
+  );
 
   try {
     const res = await fetch(url, {
       method: "GET",
       cache: "no-store",
-      signal: controller.signal,
+      signal: getController.signal,
     });
     return res.ok;
   } catch {
     return false;
   } finally {
-    clearTimeout(timeout);
+    clearTimeout(getTimeout);
   }
 }
 
@@ -777,17 +838,36 @@ chrome.storage.onChanged.addListener((changes, area) => {
   }
 });
 
-chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
-  if (message?.type === "preview") {
-    openScreensaver({ preview: true }).then(sendResponse);
+chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+  if (!message || typeof message.type !== "string") {
+    return false;
+  }
+
+  if (message.type === "preview") {
+    if (!isPopupSender(sender)) {
+      sendMessageResponse(sendResponse, { ok: false, error: "Untrusted sender." });
+      return false;
+    }
+    openScreensaver({ preview: true }).then(
+      (result) => sendMessageResponse(sendResponse, result),
+      (err) =>
+        sendMessageResponse(sendResponse, {
+          ok: false,
+          error: err instanceof Error ? err.message : String(err),
+        }),
+    );
     return true;
   }
 
-  if (message?.type === "open-premium-checkout") {
+  if (message.type === "open-premium-checkout") {
+    if (!isPopupSender(sender)) {
+      sendMessageResponse(sendResponse, { ok: false, error: "Untrusted sender." });
+      return false;
+    }
     openPremiumCheckoutWindow(message.url).then(
-      sendResponse,
+      (result) => sendMessageResponse(sendResponse, result),
       (err) =>
-        sendResponse({
+        sendMessageResponse(sendResponse, {
           ok: false,
           error:
             err instanceof Error
@@ -798,50 +878,25 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
     return true;
   }
 
-  if (message?.type === "close") {
+  if (message.type === "close") {
+    if (!isTrustedScreensaverSender(sender)) {
+      sendMessageResponse(sendResponse, { ok: false, error: "Untrusted sender." });
+      return false;
+    }
     closeScreensaver({
-      tabId: _sender?.tab?.id,
-      windowId: _sender?.tab?.windowId,
-    }).then(sendResponse);
+      tabId: sender?.tab?.id,
+      windowId: sender?.tab?.windowId,
+    }).then((result) => sendMessageResponse(sendResponse, result));
     return true;
   }
 
-  if (message?.type === "screensaver-flight-entered") {
-    const tabId = _sender?.tab?.id;
-    const windowId = _sender?.tab?.windowId;
-    if (tabId != null && windowId != null && !isScreensaverTabId(tabId)) {
-      const senderUrl = _sender?.tab?.url;
-      if (isScreensaverUrl(senderUrl)) {
-        setScreensaverInstances([
-          ...screensaverInstances,
-          {
-            tabId,
-            windowId,
-            displayId: `registered-${windowId}`,
-            displayName: "Registered screensaver",
-          },
-        ]);
-      }
+  if (message.type === "screensaver-flight-entered") {
+    if (!isTrustedScreensaverSender(sender)) {
+      sendMessageResponse(sendResponse, { ok: false, error: "Untrusted sender." });
+      return false;
     }
-    if (isScreensaverTabId(tabId)) {
-      screensaverFlightMode = true;
-    }
-    sendResponse({ ok: true, flightMode: screensaverFlightMode });
-    return false;
-  }
-
-  if (message?.type === "screensaver-flight-exited") {
-    const tabId = _sender?.tab?.id;
-    if (isScreensaverTabId(tabId)) {
-      screensaverFlightMode = false;
-    }
-    sendResponse({ ok: true, flightMode: screensaverFlightMode });
-    return false;
-  }
-
-  if (message?.type === "screensaver-page-ready") {
-    const tabId = _sender?.tab?.id;
-    const windowId = _sender?.tab?.windowId;
+    const tabId = sender?.tab?.id;
+    const windowId = sender?.tab?.windowId;
     if (tabId != null && windowId != null && !isScreensaverTabId(tabId)) {
       setScreensaverInstances([
         ...screensaverInstances,
@@ -853,19 +908,67 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
         },
       ]);
     }
-    sendResponse({ ok: true });
+    if (isScreensaverTabId(tabId)) {
+      screensaverFlightMode = true;
+    }
+    sendMessageResponse(sendResponse, { ok: true, flightMode: screensaverFlightMode });
     return false;
   }
 
-  if (message?.type === "upgrade-offline-screensaver") {
-    upgradeOfflineScreensaver(_sender?.tab?.id).then(sendResponse);
+  if (message.type === "screensaver-flight-exited") {
+    if (!isTrustedScreensaverSender(sender)) {
+      sendMessageResponse(sendResponse, { ok: false, error: "Untrusted sender." });
+      return false;
+    }
+    const tabId = sender?.tab?.id;
+    if (isScreensaverTabId(tabId)) {
+      screensaverFlightMode = false;
+    }
+    sendMessageResponse(sendResponse, { ok: true, flightMode: screensaverFlightMode });
+    return false;
+  }
+
+  if (message.type === "screensaver-page-ready") {
+    if (!isTrustedScreensaverSender(sender)) {
+      sendMessageResponse(sendResponse, { ok: false, error: "Untrusted sender." });
+      return false;
+    }
+    const tabId = sender?.tab?.id;
+    const windowId = sender?.tab?.windowId;
+    if (tabId != null && windowId != null && !isScreensaverTabId(tabId)) {
+      setScreensaverInstances([
+        ...screensaverInstances,
+        {
+          tabId,
+          windowId,
+          displayId: `registered-${windowId}`,
+          displayName: "Registered screensaver",
+        },
+      ]);
+    }
+    sendMessageResponse(sendResponse, { ok: true });
+    return false;
+  }
+
+  if (message.type === "upgrade-offline-screensaver") {
+    if (!isTrustedScreensaverTab(sender)) {
+      sendMessageResponse(sendResponse, { ok: false, error: "Untrusted sender." });
+      return false;
+    }
+    upgradeOfflineScreensaver(sender?.tab?.id).then((result) =>
+      sendMessageResponse(sendResponse, result),
+    );
     return true;
   }
 
-  if (message?.type === "status") {
+  if (message.type === "status") {
+    if (!isPopupSender(sender)) {
+      sendMessageResponse(sendResponse, { ok: false, error: "Untrusted sender." });
+      return false;
+    }
     Promise.all([getSettings(), chrome.storage.local.get("lastRun")]).then(
       ([settings, local]) => {
-        sendResponse({
+        sendMessageResponse(sendResponse, {
           ok: true,
           enabled: settings.enabled,
           idleMinutes: settings.idleMinutes,
@@ -885,6 +988,8 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
     );
     return true;
   }
+
+  return false;
 });
 
 chrome.runtime.onMessageExternal.addListener((message, sender, sendResponse) => {

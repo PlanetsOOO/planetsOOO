@@ -3,12 +3,27 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="color-scheme" content="dark" />
+    <meta name="theme-color" content="#030508" />
     <title>Orbit Offline Explorer</title>
     <link rel="stylesheet" href="screensaver-react.css" />
     <link rel="stylesheet" href="screensaver.css" />
+    <style>
+      html,
+      body {
+        background: #030508;
+      }
+
+      #root:empty::before {
+        content: "";
+        position: fixed;
+        inset: 0;
+        background: radial-gradient(circle at 50% 42%, #0a1020 0%, #030508 68%);
+      }
+    </style>
   </head>
   <body class="screensaver-mode offline-react-mode">
-    <div id="root" aria-label="Orbit offline explorer"></div>
+    <div id="root" aria-label="Orbit offline explorer" aria-busy="true"></div>
     <script src="screensaver-react.js"></script>
   </body>
 </html>

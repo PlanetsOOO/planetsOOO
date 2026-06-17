@@ -28,7 +28,11 @@ function getChromeApi(): ChromeRuntimeLike | undefined {
 }
 
 function sendRuntimeMessage(message: unknown): void {
-  getChromeApi()?.runtime?.sendMessage?.(message);
+  try {
+    getChromeApi()?.runtime?.sendMessage?.(message);
+  } catch {
+    // Extension context may be reloading.
+  }
 }
 
 function ensureScreensaverParams(): void {
@@ -225,4 +229,5 @@ createRoot(root).render(
   </React.StrictMode>,
 );
 
+root.removeAttribute("aria-busy");
 notifyReadyWhenCanvasMounts();
