@@ -1,6 +1,9 @@
 import React from "react";
 import { createRoot } from "react-dom/client";
+import { installThreeClockCompat } from "@/lib/threeClockCompat";
 import { ExplorerView } from "@/components/explorer/ExplorerView";
+
+installThreeClockCompat();
 
 const LUDICROUS_SPEED_MULTIPLIER = 100;
 const DEFAULT_SPEED_TRACKER_DETAIL = {

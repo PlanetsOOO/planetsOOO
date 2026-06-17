@@ -83,7 +83,7 @@ export default function SolarSystemCanvas() {
     <div className="absolute inset-0 z-0">
       <Canvas
         frameloop={documentVisible ? "always" : "never"}
-        shadows={!isMobile}
+        shadows={!isMobile ? "percentage" : false}
         camera={{
           position: [0, 0, 0],
           fov: 55,
@@ -101,7 +101,6 @@ export default function SolarSystemCanvas() {
         onCreated={({ gl }) => {
           if (!isMobile) {
             gl.shadowMap.enabled = true;
-            gl.shadowMap.type = THREE.PCFShadowMap;
           }
           gl.toneMapping = THREE.ACESFilmicToneMapping;
           gl.toneMappingExposure = 1.05;
