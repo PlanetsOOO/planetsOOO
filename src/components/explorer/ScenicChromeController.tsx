@@ -15,30 +15,19 @@ const ARROW_KEYS = new Set([
 ]);
 
 export function ScenicChromeController() {
-  const {
-    discoveryAutopilotActive,
-    markScenicChromeActivity,
-    markFlightReticleActivity,
-  } = useExplorer();
+  const { discoveryAutopilotActive, markScenicChromeActivity } = useExplorer();
   const activeRef = useRef(discoveryAutopilotActive);
   const markScenicRef = useRef(markScenicChromeActivity);
-  const markReticleRef = useRef(markFlightReticleActivity);
 
   useEffect(() => {
     activeRef.current = discoveryAutopilotActive;
     markScenicRef.current = markScenicChromeActivity;
-    markReticleRef.current = markFlightReticleActivity;
-  }, [
-    discoveryAutopilotActive,
-    markScenicChromeActivity,
-    markFlightReticleActivity,
-  ]);
+  }, [discoveryAutopilotActive, markScenicChromeActivity]);
 
   useEffect(() => {
     if (!discoveryAutopilotActive) return;
 
     markScenicChromeActivity();
-    markFlightReticleActivity();
 
     const onKeyDown = (e: KeyboardEvent) => {
       if (!activeRef.current) return;
@@ -58,14 +47,12 @@ export function ScenicChromeController() {
 
       if (!ARROW_KEYS.has(e.key)) {
         markScenicRef.current();
-        markReticleRef.current();
       }
     };
 
     const onPointer = () => {
       if (activeRef.current) {
         markScenicRef.current();
-        markReticleRef.current();
       }
     };
 
@@ -78,11 +65,7 @@ export function ScenicChromeController() {
       window.removeEventListener("mousedown", onPointer);
       window.removeEventListener("wheel", onPointer);
     };
-  }, [
-    discoveryAutopilotActive,
-    markFlightReticleActivity,
-    markScenicChromeActivity,
-  ]);
+  }, [discoveryAutopilotActive, markScenicChromeActivity]);
 
   return null;
 }

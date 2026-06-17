@@ -3,10 +3,15 @@
 import { useExplorer } from "@/context/ExplorerContext";
 
 export function FlightReticle() {
-  const { navigationActive, discoveryAutopilotActive, flightReticleVisible } =
-    useExplorer();
+  const {
+    navigationActive,
+    autoNavigating,
+    discoveryAutopilotActive,
+    flightReticleVisible,
+  } = useExplorer();
 
-  const active = navigationActive || discoveryAutopilotActive;
+  const active =
+    navigationActive && !autoNavigating && !discoveryAutopilotActive;
   if (!active) return null;
 
   return (

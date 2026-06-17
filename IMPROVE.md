@@ -113,7 +113,7 @@ Keep the last ~10 entries. Delete rows that no longer teach you anything.
 | 2026-06-14 | Screensaver close could reveal a second stale window | Query and close every matching screensaver tab | Check one input closes all screensaver windows |
 | 2026-06-16 | Premium offline ludicrous speed was not physical `100× c` | Reused canonical web `c` / ludicrous constants | Check offline Premium Shift+W+F HUD reaches `100× c` |
 | 2026-06-16 | Trackpad look followed camera roll/bank | Counter-rotate look deltas by roll; handle wheel for two-finger trackpad | Bank with arrows, pan trackpad — look stays screen-aligned |
-| 2026-06-16 | Labels drew on top of unrelated planets | `labelOcclusion` sphere registry; hide label when another body blocks it | Toggle labels, fly past bodies — only own label clears its planet |
+| 2026-06-16 | Reticle showed during scenic transit and Tab browse | Limit crosshair to pointer-lock manual flight only | Transit/scenic: no dot; click-to-fly: dot visible |
 
 ---
 

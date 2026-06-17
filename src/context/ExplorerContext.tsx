@@ -153,6 +153,7 @@ export function ExplorerProvider({ children }: { children: ReactNode }) {
   );
   const discoveryAutopilotActiveRef = useRef(discoveryAutopilotActive);
   const navigationActiveRef = useRef(navigationActive);
+  const autoNavigatingRef = useRef(autoNavigating);
 
   useEffect(() => {
     discoveryAutopilotActiveRef.current = discoveryAutopilotActive;
@@ -161,6 +162,10 @@ export function ExplorerProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     navigationActiveRef.current = navigationActive;
   }, [navigationActive]);
+
+  useEffect(() => {
+    autoNavigatingRef.current = autoNavigating;
+  }, [autoNavigating]);
 
   useLayoutEffect(() => {
     if (!isScreensaverMode()) return;
@@ -191,16 +196,16 @@ export function ExplorerProvider({ children }: { children: ReactNode }) {
   }, [clearFlightReticleTimer]);
 
   const markFlightReticleActivity = useCallback(() => {
-    const scenicIdleFade =
-      navigationActiveRef.current || discoveryAutopilotActiveRef.current;
-    if (!scenicIdleFade) {
-      setFlightReticleVisible(true);
-      clearFlightReticleTimer();
+    if (
+      !navigationActiveRef.current ||
+      discoveryAutopilotActiveRef.current ||
+      autoNavigatingRef.current
+    ) {
       return;
     }
     setFlightReticleVisible(true);
     scheduleFlightReticleHide();
-  }, [clearFlightReticleTimer, scheduleFlightReticleHide]);
+  }, [scheduleFlightReticleHide]);
 
   const clearScenicChromeTimer = useCallback(() => {
     if (scenicChromeTimerRef.current) {
