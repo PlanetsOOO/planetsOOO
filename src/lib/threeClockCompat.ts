@@ -5,6 +5,8 @@ import * as THREE from "three";
  * three.js r183+. Use a drop-in replacement until we adopt R3F v10.
  */
 export function installThreeClockCompat(): void {
+  if (typeof window === "undefined") return;
+
   const marker = "__orbitClockCompat";
   if ((THREE.Clock as unknown as Record<string, boolean>)[marker]) {
     return;
@@ -59,6 +61,10 @@ export function installThreeClockCompat(): void {
   }
 
   (OrbitClock as unknown as Record<string, boolean>)[marker] = true;
-  const threeNamespace = THREE as unknown as Record<string, unknown>;
-  threeNamespace.Clock = OrbitClock;
+  try {
+    const threeNamespace = THREE as unknown as Record<string, unknown>;
+    threeNamespace.Clock = OrbitClock;
+  } catch {
+    // three namespace can be read-only during SSR module evaluation.
+  }
 }
