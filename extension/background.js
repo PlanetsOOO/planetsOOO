@@ -15,13 +15,16 @@ let screensaverInstances = [];
 let fullscreenRetryTimer = null;
 let fullscreenRecoveryTimer = null;
 const lastFullscreenRequestAt = new Map();
+const windowWasFullscreen = new Map();
+const screensaverOpenAt = new Map();
 let screensaverFlightMode = false;
+let suppressFullscreenRecovery = false;
 let openingScreensaverPromise = null;
 
 const FULLSCREEN_CHECK_DELAY_MS = 3200;
 const FULLSCREEN_RECOVERY_DELAY_MS = 450;
 const FULLSCREEN_REQUEST_COOLDOWN_MS = 2500;
-const ONLINE_PROBE_TIMEOUT_MS = 2500;
+const SCREENSAVER_OPEN_GRACE_MS = 4_000;
 const OFFLINE_SCREENSAVER_PAGE = "screensaver.html";
 const PREMIUM_OFFLINE_SCREENSAVER_PAGE = "screensaver-premium.html";
 const REACT_OFFLINE_SCREENSAVER_PAGE = "screensaver-react.html";
@@ -48,8 +51,25 @@ function isTrustedScreensaverTab(sender) {
   return Boolean(tabUrl && isScreensaverUrl(tabUrl));
 }
 
+function isExtensionScreensaverPageSender(sender) {
+  if (!isExtensionPageSender(sender)) return false;
+  try {
+    const pathname = new URL(sender.url).pathname;
+    if (pathname.endsWith("/popup.html")) return false;
+    return (
+      pathname.endsWith(`/${OFFLINE_SCREENSAVER_PAGE}`) ||
+      pathname.endsWith(`/${PREMIUM_OFFLINE_SCREENSAVER_PAGE}`) ||
+      pathname.endsWith(`/${REACT_OFFLINE_SCREENSAVER_PAGE}`)
+    );
+  } catch {
+    return false;
+  }
+}
+
 function isTrustedScreensaverSender(sender) {
-  return isExtensionPageSender(sender) || isTrustedScreensaverTab(sender);
+  return (
+    isExtensionScreensaverPageSender(sender) || isTrustedScreensaverTab(sender)
+  );
 }
 
 function isPopupSender(sender) {
@@ -304,6 +324,7 @@ async function enterScreensaverFullscreen(windowId) {
 }
 
 function scheduleFullscreenRecovery(windowId) {
+  if (suppressFullscreenRecovery) return;
   if (windowId == null || !isScreensaverWindowId(windowId)) return;
   if (fullscreenRecoveryTimer != null) return;
 
@@ -320,6 +341,12 @@ function scheduleFullscreenRecovery(windowId) {
 
 function setScreensaverInstances(instances) {
   screensaverInstances = uniqueScreensaverInstances(instances);
+  const now = Date.now();
+  for (const instance of screensaverInstances) {
+    if (instance.windowId != null) {
+      screensaverOpenAt.set(instance.windowId, now);
+    }
+  }
 }
 
 function isScreensaverWindowId(windowId) {
@@ -381,7 +408,18 @@ function uniqueScreensaverInstances(instances) {
 }
 
 async function queryScreensaverInstances() {
-  const tabs = await tabsQuery({});
+  const extensionBase = chrome.runtime.getURL("");
+  const patterns = [
+    `${extensionBase}${OFFLINE_SCREENSAVER_PAGE}`,
+    `${extensionBase}${PREMIUM_OFFLINE_SCREENSAVER_PAGE}`,
+    `${extensionBase}${REACT_OFFLINE_SCREENSAVER_PAGE}`,
+    "https://www.planets.ooo/*",
+    "https://planets.ooo/*",
+    "http://localhost/*",
+    "http://127.0.0.1/*",
+  ];
+
+  const tabs = await tabsQuery({ url: patterns }).catch(() => []);
   return tabs
     .filter((tab) => tab.id != null && tab.windowId != null && isScreensaverUrl(tab.url))
     .map((tab, index) => ({
@@ -441,6 +479,7 @@ async function restoreExistingScreensaverInstances(settings = DEFAULTS) {
 function clearScreensaverTracking() {
   screensaverInstances = [];
   screensaverFlightMode = false;
+  screensaverOpenAt.clear();
   lastFullscreenRequestAt.clear();
   clearFullscreenRetry();
 }
@@ -450,7 +489,7 @@ function buildPlanetsUrl(settings) {
     const base = settings.siteUrl?.trim() || DEFAULTS.siteUrl;
     const url = new URL(base.includes("://") ? base : `https://${base}`);
     url.searchParams.set("screensaver", "1");
-    url.searchParams.set("flight", isPremiumPlan(settings) ? "1" : "0");
+    url.searchParams.set("flight", "0");
     url.searchParams.set("flightKey", settings.flightKey || DEFAULTS.flightKey);
     url.searchParams.set("exitKey", settings.exitKey || settings.flightKey || DEFAULTS.exitKey);
     return url.toString();
@@ -464,77 +503,34 @@ function buildPlanetsUrl(settings) {
   }
 }
 
-function buildOfflineScreensaverUrl(settings) {
-  const premium = isPremiumPlan(settings);
-  // Both tiers use the shared React/R3F scenic explorer offline; Premium keeps
-  // manual flight enabled, while Basic receives scenic tour only.
-  const page = REACT_OFFLINE_SCREENSAVER_PAGE;
-  const url = new URL(chrome.runtime.getURL(page));
+function buildPremiumScreensaverUrl(settings) {
+  const url = new URL(chrome.runtime.getURL(REACT_OFFLINE_SCREENSAVER_PAGE));
+  url.searchParams.set("screensaver", "1");
   url.searchParams.set("offline", "1");
-  url.searchParams.set("flight", premium ? "1" : "0");
+  url.searchParams.set("flight", "1");
   url.searchParams.set("flightKey", settings.flightKey || DEFAULTS.flightKey);
   url.searchParams.set("exitKey", settings.exitKey || settings.flightKey || DEFAULTS.exitKey);
   return url.toString();
 }
 
-async function onlineScreensaverReachable(url) {
-  const headController = new AbortController();
-  const headTimeout = setTimeout(
-    () => headController.abort(),
-    ONLINE_PROBE_TIMEOUT_MS,
-  );
-
-  try {
-    const res = await fetch(url, {
-      method: "HEAD",
-      cache: "no-store",
-      signal: headController.signal,
-    });
-    if (res.ok) return true;
-  } catch {
-    // Some hosts reject HEAD — fall back to GET below.
-  } finally {
-    clearTimeout(headTimeout);
-  }
-
-  const getController = new AbortController();
-  const getTimeout = setTimeout(
-    () => getController.abort(),
-    ONLINE_PROBE_TIMEOUT_MS,
-  );
-
-  try {
-    const res = await fetch(url, {
-      method: "GET",
-      cache: "no-store",
-      signal: getController.signal,
-    });
-    return res.ok;
-  } catch {
-    return false;
-  } finally {
-    clearTimeout(getTimeout);
-  }
-}
-
-async function getScreensaverUrl(settings) {
-  const onlineUrl = buildPlanetsUrl(settings);
-  if (await onlineScreensaverReachable(onlineUrl)) {
+function getScreensaverUrl(settings) {
+  if (isPremiumPlan(settings)) {
     return {
-      url: onlineUrl,
-      source: "planets",
-      offline: false,
-      onlineUrl,
+      url: buildPremiumScreensaverUrl(settings),
+      source: "packaged-react",
+      offline: true,
+      onlineUrl: null,
       warning: null,
     };
   }
 
+  const onlineUrl = buildPlanetsUrl(settings);
   return {
-    url: buildOfflineScreensaverUrl(settings),
-    source: "packaged-offline",
-    offline: true,
+    url: onlineUrl,
+    source: "planets",
+    offline: false,
     onlineUrl,
-    warning: "PlanetsOOO is unavailable; using packaged offline scenic mode.",
+    warning: null,
   };
 }
 
@@ -569,6 +565,8 @@ function hasMirroredBounds(displays) {
 }
 
 async function focusExistingScreensaver(settings = DEFAULTS) {
+  suppressFullscreenRecovery = false;
+
   if (screensaverInstances.length === 0) {
     return restoreExistingScreensaverInstances(settings);
   }
@@ -606,7 +604,7 @@ async function launchScreensaver({ preview = false } = {}) {
     return result;
   }
 
-  const screensaverUrl = await getScreensaverUrl(settings);
+  const screensaverUrl = getScreensaverUrl(settings);
 
   if (await focusExistingScreensaver(settings)) {
     const result = {
@@ -630,6 +628,9 @@ async function launchScreensaver({ preview = false } = {}) {
         : null;
   if (displayWarning) warnings.push(displayWarning);
   if (screensaverUrl.warning) warnings.push(screensaverUrl.warning);
+
+  suppressFullscreenRecovery = false;
+  windowWasFullscreen.clear();
 
   try {
     const instances = [];
@@ -729,6 +730,9 @@ async function openScreensaver(options = {}) {
 }
 
 async function closeScreensaver(fallback = {}) {
+  suppressFullscreenRecovery = true;
+  clearFullscreenRetry();
+
   const discovered = await queryScreensaverInstances().catch(() => []);
   const instances = uniqueScreensaverInstances([
     ...screensaverInstances,
@@ -742,44 +746,9 @@ async function closeScreensaver(fallback = {}) {
   return { ok: true };
 }
 
-async function upgradeOfflineScreensaver(tabId) {
-  if (tabId == null) {
-    return { ok: false, upgraded: false, error: "No active offline screensaver tab." };
-  }
-
-  if (!isScreensaverTabId(tabId)) {
-    const tab = await tabsGet(tabId).catch(() => null);
-    if (tab?.windowId != null && isScreensaverUrl(tab.url)) {
-      setScreensaverInstances([
-        ...screensaverInstances,
-        {
-          tabId,
-          windowId: tab.windowId,
-          displayId: `registered-${tab.windowId}`,
-          displayName: "Registered screensaver",
-        },
-      ]);
-    }
-  }
-
-  if (!isScreensaverTabId(tabId)) {
-    return { ok: false, upgraded: false, error: "No active offline screensaver tab." };
-  }
-
-  const settings = await getSettings();
-  const onlineUrl = buildPlanetsUrl(settings);
-  if (!(await onlineScreensaverReachable(onlineUrl))) {
-    return { ok: true, upgraded: false };
-  }
-
-  await saveDebug({
-    ok: true,
-    upgraded: false,
-    deferred: true,
-    source: "planets",
-    url: onlineUrl,
-  });
-  return { ok: true, upgraded: false, deferred: true, url: onlineUrl };
+async function upgradeOfflineScreensaver() {
+  // Basic always uses planets.ooo; Premium always uses packaged React — no upgrade path.
+  return { ok: true, upgraded: false };
 }
 
 chrome.idle.onStateChanged.addListener((state) => {
@@ -818,7 +787,25 @@ chrome.windows.onRemoved.addListener((windowId) => {
 if (chrome.windows.onBoundsChanged) {
   chrome.windows.onBoundsChanged.addListener((win) => {
     if (!isScreensaverWindowId(win.id)) return;
+
+    const wasFullscreen = windowWasFullscreen.get(win.id) === true;
+    windowWasFullscreen.set(win.id, win.state === "fullscreen");
+
     if (win.state === "fullscreen") return;
+    if (suppressFullscreenRecovery) return;
+
+    // Esc leaves OS fullscreen — dismiss after the open grace window.
+    if (wasFullscreen) {
+      const openedAt = screensaverOpenAt.get(win.id) ?? 0;
+      if (Date.now() - openedAt < SCREENSAVER_OPEN_GRACE_MS) {
+        scheduleFullscreenRecovery(win.id);
+        return;
+      }
+      suppressFullscreenRecovery = true;
+      void closeScreensaver({ windowId: win.id });
+      return;
+    }
+
     scheduleFullscreenRecovery(win.id);
   });
 }
@@ -897,7 +884,13 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     }
     const tabId = sender?.tab?.id;
     const windowId = sender?.tab?.windowId;
-    if (tabId != null && windowId != null && !isScreensaverTabId(tabId)) {
+    const senderUrl = sender?.tab?.url;
+    if (
+      tabId != null &&
+      windowId != null &&
+      !isScreensaverTabId(tabId) &&
+      isScreensaverUrl(senderUrl)
+    ) {
       setScreensaverInstances([
         ...screensaverInstances,
         {
@@ -935,7 +928,13 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     }
     const tabId = sender?.tab?.id;
     const windowId = sender?.tab?.windowId;
-    if (tabId != null && windowId != null && !isScreensaverTabId(tabId)) {
+    const senderUrl = sender?.tab?.url;
+    if (
+      tabId != null &&
+      windowId != null &&
+      !isScreensaverTabId(tabId) &&
+      isScreensaverUrl(senderUrl)
+    ) {
       setScreensaverInstances([
         ...screensaverInstances,
         {
@@ -955,7 +954,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       sendMessageResponse(sendResponse, { ok: false, error: "Untrusted sender." });
       return false;
     }
-    upgradeOfflineScreensaver(sender?.tab?.id).then((result) =>
+    upgradeOfflineScreensaver().then((result) =>
       sendMessageResponse(sendResponse, result),
     );
     return true;
@@ -996,6 +995,14 @@ chrome.runtime.onMessageExternal.addListener((message, sender, sendResponse) => 
   if (message?.type !== "premium-entitlement") return false;
   if (!allowedPremiumSender(sender.url)) {
     sendResponse({ ok: false, error: "Sender not allowed." });
+    return false;
+  }
+  if (
+    typeof message.entitlement !== "string" ||
+    message.entitlement.length === 0 ||
+    message.entitlement.length > 16_384
+  ) {
+    sendResponse({ ok: false, error: "Invalid entitlement." });
     return false;
   }
 

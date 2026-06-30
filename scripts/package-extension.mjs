@@ -1,5 +1,12 @@
 import { execFileSync } from "node:child_process";
-import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import {
+  cpSync,
+  existsSync,
+  mkdirSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -10,14 +17,18 @@ import { fileURLToPath } from "node:url";
  * contains only the files Chrome needs to run — never the `offline-tour/`
  * bundle source, README, or other repo files.
  *
- * Usage:
- *   node scripts/package-extension.mjs            # bump patch version, then zip
- *   node scripts/package-extension.mjs --minor    # bump minor (x.Y.0)
- *   node scripts/package-extension.mjs --major     # bump major (X.0.0)
- *   node scripts/package-extension.mjs --no-bump   # keep current version
- *   node scripts/package-extension.mjs --set 3.0.0 # set an explicit version
+ * By default uses `extension/manifest.store.json` (no localhost) for Chrome Web
+ * Store uploads. Pass `--dev` to zip `extension/manifest.json` instead.
  *
- * Run the offline build first so the bundles are current (the `package:extension`
+ * Usage:
+ *   node scripts/package-extension.mjs            # store zip (patch bump)
+ *   node scripts/package-extension.mjs --dev      # dev zip with localhost
+ *   node scripts/package-extension.mjs --minor    # bump minor (x.Y.0)
+ *   node scripts/package-extension.mjs --major    # bump major (X.0.0)
+ *   node scripts/package-extension.mjs --no-bump  # keep current version
+ *   node scripts/package-extension.mjs --set 3.0.0
+ *
+ * Run the offline build first so the bundles are current (`package:extension`
  * npm script chains both steps).
  */
 
@@ -25,7 +36,8 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const root = path.resolve(__dirname, "..");
 const extensionDir = path.join(root, "extension");
 const distDir = path.join(root, "dist");
-const manifestPath = path.join(extensionDir, "manifest.json");
+const devManifestPath = path.join(extensionDir, "manifest.json");
+const storeManifestPath = path.join(extensionDir, "manifest.store.json");
 
 // Allowlist of everything that ships. Anything not listed here is excluded.
 const INCLUDE = [
@@ -48,13 +60,16 @@ const INCLUDE = [
   "textures",
 ];
 
-function parseVersionArg(argv) {
-  if (argv.includes("--no-bump")) return { mode: "none" };
-  if (argv.includes("--major")) return { mode: "major" };
-  if (argv.includes("--minor")) return { mode: "minor" };
-  const setIndex = argv.indexOf("--set");
+const argv = process.argv.slice(2);
+const packageDev = argv.includes("--dev");
+
+function parseVersionArg(args) {
+  if (args.includes("--no-bump")) return { mode: "none" };
+  if (args.includes("--major")) return { mode: "major" };
+  if (args.includes("--minor")) return { mode: "minor" };
+  const setIndex = args.indexOf("--set");
   if (setIndex !== -1) {
-    const value = argv[setIndex + 1];
+    const value = args[setIndex + 1];
     if (!value || !/^\d+\.\d+\.\d+$/.test(value)) {
       throw new Error("--set requires a version like 3.0.0");
     }
@@ -71,14 +86,25 @@ function nextVersion(current, bump) {
   if (parts.length !== 3 || parts.some((n) => Number.isNaN(n))) {
     throw new Error(`manifest version "${current}" is not X.Y.Z`);
   }
-  let [major, minor, patch] = parts;
+  const [major, minor, patch] = parts;
   if (bump.mode === "major") return `${major + 1}.0.0`;
   if (bump.mode === "minor") return `${major}.${minor + 1}.0`;
   return `${major}.${minor}.${patch + 1}`;
 }
 
-// --- Validate the allowlisted files exist ----------------------------------
-const missing = INCLUDE.filter((entry) => !existsSync(path.join(extensionDir, entry)));
+function writeManifest(filePath, manifest) {
+  writeFileSync(filePath, `${JSON.stringify(manifest, null, 2)}\n`);
+}
+
+// --- Validate inputs and shipped files --------------------------------------
+if (!existsSync(storeManifestPath)) {
+  console.error("Missing extension/manifest.store.json");
+  process.exit(1);
+}
+
+const missing = INCLUDE.filter(
+  (entry) => entry !== "manifest.json" && !existsSync(path.join(extensionDir, entry)),
+);
 if (missing.length > 0) {
   console.error(
     `Cannot package — missing extension files: ${missing.join(", ")}.\n` +
@@ -87,38 +113,67 @@ if (missing.length > 0) {
   process.exit(1);
 }
 
-// --- Bump the manifest version ----------------------------------------------
-const manifest = JSON.parse(readFileSync(manifestPath, "utf8"));
-const bump = parseVersionArg(process.argv.slice(2));
-const version = nextVersion(manifest.version, bump);
+// --- Bump version on both manifests (keep them in sync) ---------------------
+const devManifest = JSON.parse(readFileSync(devManifestPath, "utf8"));
+const storeManifest = JSON.parse(readFileSync(storeManifestPath, "utf8"));
+const bump = parseVersionArg(argv);
+const version = nextVersion(devManifest.version, bump);
 
-if (version !== manifest.version) {
-  manifest.version = version;
-  writeFileSync(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`);
-  console.log(`manifest.json version → ${version}`);
+if (version !== devManifest.version) {
+  devManifest.version = version;
+  storeManifest.version = version;
+  writeManifest(devManifestPath, devManifest);
+  writeManifest(storeManifestPath, storeManifest);
+  console.log(`manifest version → ${version} (dev + store)`);
 } else {
-  console.log(`manifest.json version unchanged (${version})`);
+  console.log(`manifest version unchanged (${version})`);
 }
 
-// --- Zip the allowlisted files ----------------------------------------------
-const slug = (manifest.name || "extension")
+const packagedManifest = packageDev ? devManifest : storeManifest;
+const variantLabel = packageDev ? "dev" : "store";
+
+// --- Stage allowlisted files with the chosen manifest -----------------------
+const stageDir = path.join(distDir, ".extension-package-staging");
+rmSync(stageDir, { recursive: true, force: true });
+mkdirSync(stageDir, { recursive: true });
+
+for (const entry of INCLUDE) {
+  if (entry === "manifest.json") continue;
+  cpSync(path.join(extensionDir, entry), path.join(stageDir, entry), {
+    recursive: true,
+  });
+}
+
+writeManifest(path.join(stageDir, "manifest.json"), packagedManifest);
+
+// --- Zip the staged tree ----------------------------------------------------
+const slug = (packagedManifest.name || "extension")
   .toLowerCase()
   .replace(/[^a-z0-9]+/g, "-")
   .replace(/^-+|-+$/g, "");
-const zipName = `${slug}-${version}.zip`;
+const zipName = packageDev
+  ? `${slug}-${version}-dev.zip`
+  : `${slug}-${version}.zip`;
 const zipPath = path.join(distDir, zipName);
 
 mkdirSync(distDir, { recursive: true });
 if (existsSync(zipPath)) rmSync(zipPath);
 
-// `zip` from extensionDir keeps clean relative paths at the archive root.
 execFileSync(
   "zip",
-  ["-r", "-X", "-q", zipPath, ...INCLUDE, "-x", "*.DS_Store", "-x", "__MACOSX/*"],
-  { cwd: extensionDir, stdio: "inherit" },
+  ["-r", "-X", "-q", zipPath, ".", "-x", "*.DS_Store", "-x", "__MACOSX/*"],
+  { cwd: stageDir, stdio: "inherit" },
 );
 
-const sizeMb = (execFileSync("du", ["-k", zipPath]).toString().split("\t")[0] / 1024).toFixed(1);
-console.log(`Packaged ${path.relative(root, zipPath)} (${sizeMb} MB)`);
-console.log("Upload this zip in the Chrome Web Store dashboard, or load the");
-console.log("extension/ folder unpacked for local testing.");
+rmSync(stageDir, { recursive: true, force: true });
+
+const sizeMb = (
+  execFileSync("du", ["-k", zipPath]).toString().split("\t")[0] / 1024
+).toFixed(1);
+console.log(`Packaged ${path.relative(root, zipPath)} (${sizeMb} MB, ${variantLabel})`);
+if (packageDev) {
+  console.log("Dev zip includes localhost host_permissions for local testing.");
+} else {
+  console.log("Store zip uses manifest.store.json — upload in the Chrome Web Store dashboard.");
+}
+console.log("Load extension/ unpacked with manifest.json for day-to-day development.");

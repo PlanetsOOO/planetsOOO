@@ -27,6 +27,7 @@ import {
   loadApproachTextureByUrl,
   loadApproachTierTexture,
 } from "@/lib/approachTextureLoader";
+import { assetUrl } from "@/lib/assetUrl";
 import {
   applyApproachPlanetShader,
   updateApproachPlanetUniforms,
@@ -85,10 +86,10 @@ export function PlanetMesh({ config }: PlanetMeshProps) {
   const impostorSizeRef = useRef(2);
 
   const textureUrls = useMemo(() => {
-    const urls: Record<string, string> = { map: config.texture };
-    if (config.clouds) urls.clouds = config.clouds;
-    if (config.nightMap) urls.night = config.nightMap;
-    if (config.ringTexture) urls.ring = config.ringTexture;
+    const urls: Record<string, string> = { map: assetUrl(config.texture) };
+    if (config.clouds) urls.clouds = assetUrl(config.clouds);
+    if (config.nightMap) urls.night = assetUrl(config.nightMap);
+    if (config.ringTexture) urls.ring = assetUrl(config.ringTexture);
     return urls;
   }, [config]);
 

@@ -18,6 +18,7 @@ import {
   raDecToVector3,
 } from "@/lib/celestial/coordinates";
 import { RENDER_FRAME_PRIORITY } from "@/lib/renderFramePriority";
+import { assetUrl } from "@/lib/assetUrl";
 
 interface StarFeature {
   type: "Feature";
@@ -194,9 +195,9 @@ export function CelestialSky() {
 
     async function load() {
       const [starsRes, linesRes, dsosRes] = await Promise.all([
-        fetch("/data/stars.6.json"),
-        fetch("/data/constellations.lines.json"),
-        fetch("/data/dsos.bright.json"),
+        fetch(assetUrl("/data/stars.6.json")),
+        fetch(assetUrl("/data/constellations.lines.json")),
+        fetch(assetUrl("/data/dsos.bright.json")),
       ]);
       if (!starsRes.ok || !linesRes.ok) return;
 

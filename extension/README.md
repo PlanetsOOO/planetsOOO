@@ -5,12 +5,11 @@ Chrome screensaver extension for the PlanetsOOO scenic tour.
 ## What It Does
 
 - Uses `chrome.idle` to detect inactivity.
-- Opens the PlanetsOOO scenic tour (`?screensaver=1`) on the selected display.
-- Falls back to a packaged offline scenic mode when PlanetsOOO is unreachable,
-  without replacing an active fullscreen tab mid-session.
+- **Basic:** opens the PlanetsOOO scenic tour (`?screensaver=1&flight=0`) on the selected display (requires internet).
+- **Premium:** opens the packaged React explorer (`screensaver-react.html`) with offline flight mode.
 - Requests window fullscreen with `chrome.windows.update(windowId, { state: "fullscreen" })`.
-- Basic mode includes scenic/offline screensaver access but disables flight mode.
-- Premium mode enables flight key, exit flight, and flight controls.
+- Basic mode uses the hosted scenic tour on planets.ooo (online only).
+- Premium mode uses the packaged React explorer with flight controls (offline).
 - In PlanetsOOO mode, any input closes before flight except the configured
   flight key. After flight starts, the configured exit key closes the tab.
 - Flight mode input is treated as intentional control input, not activity that
@@ -30,7 +29,8 @@ Chrome screensaver extension for the PlanetsOOO scenic tour.
 
 ## Files
 
-- `manifest.json` — Manifest V3 config
+- `manifest.json` — Manifest V3 config (dev: includes localhost for `npm run dev`)
+- `manifest.store.json` — Chrome Web Store variant (planets.ooo only; no localhost)
 - `background.js` — idle detection, fullscreen window control
 - `screensaver.html/js/css` — packaged offline Three.js all-planets scenic fallback
 - `offline-tour/main.js` — source for the bundled offline mini-scene
@@ -49,20 +49,27 @@ Chrome's fullscreen notice, including the Esc hint, is browser-owned UI and
 cannot be hidden by an extension. The extension avoids unnecessary repeat
 fullscreen requests so that notice is shown as little as Chrome allows.
 
-The publish build tries `https://www.planets.ooo/` first. If the site cannot
-be reached quickly, the extension opens its packaged offline scenic fallback.
-It does not replace an active offline screensaver tab when connectivity returns.
-The offline fallback is a silent bundled Three.js mini-scene with local
-low-resolution planet textures. It starts on a random tour body, shows one
-focused body at a time, then uses a slow 30-second handoff where the current
-body exits screen right before the next body enters from screen left. It does
-not include the full Next.js app, NASA APIs, AI routes,
-Earth terrain tiles, or high-resolution texture tiers.
+Basic opens `https://www.planets.ooo/?screensaver=1` when idle. Premium opens
+the bundled `screensaver-react.html` explorer. There is no reachability probe
+or Basic offline fallback — Basic requires planets.ooo to be reachable.
 
-Regenerate the offline bundle after editing `offline-tour/main.js`:
+Regenerate the offline bundle after editing `offline-app/main.tsx` or
+`offline-tour/main.js`:
 
 ```bash
 npm run build:extension-offline
+```
+
+Package for Chrome Web Store upload (uses `manifest.store.json`):
+
+```bash
+npm run package:extension
+```
+
+For a dev zip that retains localhost permissions:
+
+```bash
+npm run package:extension:dev
 ```
 
 ## Admin Premium Override
@@ -82,6 +89,14 @@ chrome.storage.sync.set({ plan: "basic" })
 ```
 
 After changing the override, reopen the popup and run Preview again.
+
+## Privacy policy
+
+Store listing and Premium checkout link to:
+
+**https://www.planets.ooo/privacy**
+
+Source: `src/app/privacy/page.tsx` — update `LAST_UPDATED` when practices change.
 
 ## Premium Payment Setup
 

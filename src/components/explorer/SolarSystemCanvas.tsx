@@ -35,6 +35,13 @@ export default function SolarSystemCanvas() {
   const isMobile = useCoarsePointer();
   const documentVisible = useDocumentVisible();
   const screensaver = isScreensaverMode();
+  const isExtensionPage =
+    typeof window !== "undefined" &&
+    window.location.protocol === "chrome-extension:";
+  // Extension popups and screensaver windows can report document.hidden while
+  // still visible — never pause the loop there (76eea9f regression).
+  const animateCanvas =
+    screensaver || isExtensionPage || documentVisible;
   const [clientReady, setClientReady] = useState(screensaver);
   const [webglOk, setWebglOk] = useState(true);
   const [canvasError, setCanvasError] = useState(false);
@@ -82,7 +89,7 @@ export default function SolarSystemCanvas() {
   return (
     <div className="absolute inset-0 z-0">
       <Canvas
-        frameloop={documentVisible ? "always" : "never"}
+        frameloop={animateCanvas ? "always" : "never"}
         shadows={!isMobile ? "percentage" : false}
         camera={{
           position: [0, 0, 0],

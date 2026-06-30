@@ -4,6 +4,7 @@ import {
   type ApproachTextureTier,
 } from "@/data/planetApproachTextures";
 import type { ApproachTierIndex } from "@/lib/approachLayers";
+import { assetUrl } from "@/lib/assetUrl";
 import * as THREE from "three";
 
 const APPROACH_TIERS: ApproachTextureTier[] = ["2k", "4k", "8k"];
@@ -33,7 +34,7 @@ export function loadApproachTextureByUrl(
   const load = new Promise<THREE.Texture>((resolve) => {
     const loader = new THREE.TextureLoader();
     loader.load(
-      url,
+      assetUrl(url),
       (texture) => {
         configureApproachTexture(texture);
         tierCache.set(url, texture);
@@ -72,7 +73,7 @@ export function loadApproachTierTexture(
   const load = new Promise<THREE.Texture>((resolve) => {
     const loader = new THREE.TextureLoader();
     loader.load(
-      url,
+      assetUrl(url),
       (texture) => {
         configureApproachTexture(texture);
         tierCache.set(url, texture);

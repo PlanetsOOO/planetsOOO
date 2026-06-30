@@ -50,10 +50,6 @@ function ensureScreensaverParams(): void {
     url.searchParams.set("offline", "1");
     changed = true;
   }
-  if (!url.searchParams.has("flight")) {
-    url.searchParams.set("flight", "1");
-    changed = true;
-  }
 
   if (changed) {
     window.history.replaceState(null, "", url.toString());

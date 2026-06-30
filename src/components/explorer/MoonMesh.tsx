@@ -31,6 +31,7 @@ import {
   moonRenderRadius,
 } from "@/lib/coordinates/frame";
 import { registerBodyOccluder, removeLabelOccluder } from "@/lib/labelOcclusion";
+import { assetUrl } from "@/lib/assetUrl";
 import { RENDER_FRAME_PRIORITY } from "@/lib/renderFramePriority";
 import { BodyLabel } from "./BodyLabel";
 
@@ -55,7 +56,7 @@ export function MoonMesh() {
   const isHighlighted = isNavTarget || isReticleTarget;
   const { gl, camera, size } = useThree();
 
-  const texture = useTexture(MOON.texture);
+  const texture = useTexture(assetUrl(MOON.texture));
   const impostorMat = useMemo(
     () => createCircularSpriteMaterial({ opacity: 0.78, depthWrite: false }),
     [],

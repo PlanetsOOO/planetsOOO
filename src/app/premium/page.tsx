@@ -72,6 +72,16 @@ export default async function PremiumPage({ searchParams }: PremiumPageProps) {
           </form>
 
         </div>
+
+        <p className="mt-10 text-center text-xs text-zinc-600">
+          Payments processed by Stripe.{" "}
+          <a
+            href="/privacy"
+            className="text-zinc-500 underline underline-offset-2 hover:text-zinc-400"
+          >
+            Privacy policy
+          </a>
+        </p>
       </section>
     </main>
   );
