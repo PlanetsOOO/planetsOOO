@@ -174,6 +174,16 @@ export function OptionsMenu() {
               {speed.toFixed(1)}×
             </span>
           </label>
+          <p className="mt-4 border-t border-white/5 pt-3 text-center text-[10px] leading-5 text-zinc-600">
+            © {new Date().getFullYear()} planets.ooo. All rights reserved.
+            <span className="mx-1.5 text-zinc-700">·</span>
+            <a
+              href="/privacy"
+              className="text-zinc-600 transition-colors hover:text-zinc-500"
+            >
+              Privacy
+            </a>
+          </p>
         </div>
       )}
     </div>

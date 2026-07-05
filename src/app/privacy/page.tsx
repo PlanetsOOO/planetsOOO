@@ -5,20 +5,23 @@ import Link from "next/link";
 export const metadata: Metadata = {
   title: "Privacy Policy — Orbit",
   description:
-    "How Orbit (planets.ooo) and the Orbit Screensaver Chrome extension handle data, Premium checkout, and local storage.",
+    "How Orbit (planets.ooo) and the Orbit Screensaver Chrome extension handle data, Premium checkout, simulation disclaimers, and local storage.",
 };
 
-const LAST_UPDATED = "June 16, 2026";
+const LAST_UPDATED = "July 5, 2026";
+const CONTACT_EMAIL = "privacy@planets.ooo";
 
 function Section({
+  id,
   title,
   children,
 }: {
+  id?: string;
   title: string;
   children: ReactNode;
 }) {
   return (
-    <section className="mt-10">
+    <section id={id} className="mt-10 scroll-mt-8">
       <h2 className="text-lg font-semibold tracking-tight text-zinc-100">
         {title}
       </h2>
@@ -37,11 +40,11 @@ export default function PrivacyPage() {
           Orbit · planets.ooo
         </p>
         <h1 className="text-4xl font-semibold tracking-tight text-zinc-50 sm:text-5xl">
-          Privacy Policy
+          Privacy Policy &amp; Disclaimer
         </h1>
         <p className="mt-4 text-sm text-zinc-500">Last updated: {LAST_UPDATED}</p>
         <p className="mt-6 text-sm leading-7 text-zinc-400">
-          This policy describes how the Orbit solar system explorer website (
+          This page describes how the Orbit solar system explorer website (
           <a
             href="https://www.planets.ooo"
             className="text-sky-300/90 underline decoration-sky-300/30 underline-offset-2 hover:text-sky-200"
@@ -49,8 +52,8 @@ export default function PrivacyPage() {
             planets.ooo
           </a>
           ) and the <strong className="font-medium text-zinc-300">Orbit Screensaver</strong>{" "}
-          Chrome extension collect, use, and store information. We designed both
-          products to work without a user account.
+          Chrome extension collect, use, and store information. Orbit does not
+          require a user account to explore or use the screensaver.
         </p>
 
         <Section title="Summary">
@@ -65,6 +68,43 @@ export default function PrivacyPage() {
           <p>
             We do not sell personal information. We do not use advertising or
             social-media trackers in the extension or on the core explorer.
+          </p>
+        </Section>
+
+        <Section id="simulation-disclaimer" title="Simulation & content disclaimer">
+          <p>
+            Orbit is an <strong className="font-medium text-zinc-300">educational hobbyist simulation</strong>{" "}
+            for visualizing the solar system. Positions, distances, speeds, and
+            visual effects are simplified or stylized for exploration — they are
+            not certified for navigation, aviation, maritime use, astronomy
+            research, or any safety-critical purpose.
+          </p>
+          <p>
+            Planetary imagery, ephemeris data, and mission facts may be
+            approximate, outdated, or incomplete. NASA and JPL data sources are
+            credited where applicable;{" "}
+            <strong className="font-medium text-zinc-300">NASA does not endorse this product</strong>.
+          </p>
+          <p>
+            &quot;Imagine&quot; transit and lightspeed effects are visual overlays only
+            and do not represent physically accurate travel or relativistic
+            physics. Use your own judgment and consult authoritative sources
+            for real-world decisions.
+          </p>
+        </Section>
+
+        <Section title="Who we are (data controller)">
+          <p>
+            The operator of planets.ooo and the Orbit Screensaver extension
+            (&quot;we,&quot; &quot;us&quot;) is responsible for the processing described in this
+            policy. For privacy questions or requests, contact{" "}
+            <a
+              href={`mailto:${CONTACT_EMAIL}`}
+              className="text-sky-300/90 underline decoration-sky-300/30 underline-offset-2 hover:text-sky-200"
+            >
+              {CONTACT_EMAIL}
+            </a>
+            .
           </p>
         </Section>
 
@@ -145,11 +185,59 @@ export default function PrivacyPage() {
             Do not enter passwords or sensitive personal data into AI prompts.
             AI features are optional and not required for the screensaver.
           </p>
+          <p>
+            <strong className="text-zinc-300">Browser storage</strong> — The
+            website does not use third-party advertising cookies on the core
+            explorer.
+          </p>
+        </Section>
+
+        <Section title="Legal bases (EEA & UK)">
+          <p>
+            Where GDPR or UK GDPR applies, we rely on the following bases:
+          </p>
+          <ul className="list-disc space-y-2 pl-5">
+            <li>
+              <strong className="text-zinc-300">Contract</strong> — processing
+              needed to complete Premium checkout and deliver your unlock
+            </li>
+            <li>
+              <strong className="text-zinc-300">Legitimate interests</strong> —
+              operating and securing the website, preventing abuse, and
+              maintaining extension functionality (balanced against your rights)
+            </li>
+            <li>
+              <strong className="text-zinc-300">Consent</strong> — optional AI
+              features when you actively use them; you may stop by not using those
+              features
+            </li>
+          </ul>
+        </Section>
+
+        <Section title="Retention">
+          <ul className="list-disc space-y-2 pl-5">
+            <li>
+              Extension settings and Premium tokens — until you uninstall the
+              extension or clear extension data
+            </li>
+            <li>
+              Premium purchase records — as long as needed to honor your unlock
+              and meet tax/accounting obligations
+            </li>
+            <li>
+              Hosting logs — typically days to weeks, per our hosting provider&apos;s
+              defaults
+            </li>
+            <li>
+              AI prompts — processed by xAI per their policy; we do not intend to
+              build long-term profiles from optional AI use
+            </li>
+          </ul>
         </Section>
 
         <Section title="What we do not collect">
           <ul className="list-disc space-y-2 pl-5">
-            <li>No Orbit user accounts or passwords</li>
+            <li>No Orbit user accounts or passwords (login features are not offered today)</li>
             <li>No sale of personal information</li>
             <li>
               No advertising trackers in the extension package we distribute
@@ -182,12 +270,44 @@ export default function PrivacyPage() {
               on the website only, when configured
             </li>
           </ul>
+          <p>
+            Some providers may process data in the United States or other
+            countries. Where required, we rely on appropriate safeguards such as
+            standard contractual clauses offered by those providers.
+          </p>
+        </Section>
+
+        <Section title="Your rights">
+          <p>
+            Depending on where you live, you may have rights to access, correct,
+            delete, or restrict certain processing of personal information, and
+            to object or withdraw consent where processing is consent-based.
+          </p>
+          <p>
+            <strong className="font-medium text-zinc-300">California (CCPA/CPRA)</strong>{" "}
+            — We do not sell or share personal information for cross-context
+            behavioral advertising. California residents may request disclosure
+            or deletion by emailing{" "}
+            <a
+              href={`mailto:${CONTACT_EMAIL}`}
+              className="text-sky-300/90 underline decoration-sky-300/30 underline-offset-2 hover:text-sky-200"
+            >
+              {CONTACT_EMAIL}
+            </a>
+            . We will not discriminate against you for exercising these rights.
+          </p>
+          <p>
+            <strong className="font-medium text-zinc-300">EEA & UK</strong> — You
+            may lodge a complaint with your local supervisory authority. We
+            encourage you to contact us first so we can try to resolve your
+            concern.
+          </p>
         </Section>
 
         <Section title="Children">
           <p>
-            Orbit is not directed at children under 13. We do not knowingly
-            collect personal information from children.
+            Orbit is not directed at children under 13 (or 16 where applicable).
+            We do not knowingly collect personal information from children.
           </p>
         </Section>
 
@@ -197,6 +317,7 @@ export default function PrivacyPage() {
             <li>Adjust screensaver settings in the extension popup</li>
             <li>Decline Premium purchase — Basic scenic mode remains available</li>
             <li>Disable Chrome Sync for extensions if you do not want settings synced</li>
+            <li>Clear site data in your browser if you want to reset local website preferences</li>
           </ul>
         </Section>
 
@@ -211,15 +332,15 @@ export default function PrivacyPage() {
 
         <Section title="Contact">
           <p>
-            Questions about this policy or your data can be sent through the
-            contact information listed on the{" "}
-            <Link
-              href="/"
+            Questions about this policy, the simulation disclaimer, or your data:{" "}
+            <a
+              href={`mailto:${CONTACT_EMAIL}`}
               className="text-sky-300/90 underline decoration-sky-300/30 underline-offset-2 hover:text-sky-200"
             >
-              Orbit website
-            </Link>{" "}
-            or the Chrome Web Store listing support channel once published.
+              {CONTACT_EMAIL}
+            </a>
+            . You can also reach us through the Chrome Web Store listing support
+            channel once published.
           </p>
         </Section>
 
@@ -234,6 +355,15 @@ export default function PrivacyPage() {
             NASA media guidelines
           </a>
           . NASA does not endorse this product.
+        </p>
+
+        <p className="mt-6 text-center text-xs text-zinc-600">
+          <Link
+            href="/"
+            className="text-zinc-500 underline underline-offset-2 hover:text-zinc-400"
+          >
+            Back to explorer
+          </Link>
         </p>
       </article>
     </main>

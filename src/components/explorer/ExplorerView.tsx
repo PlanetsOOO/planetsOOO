@@ -4,6 +4,13 @@ import { useEffect } from "react";
 import { ExplorerProvider, useExplorer } from "@/context/ExplorerContext";
 import { useMobileLandscape } from "@/hooks/useMobileLandscape";
 import { useScreensaverMode } from "@/hooks/useScreensaverMode";
+import {
+  showExplorerChrome,
+  isExtensionPackaged,
+  isMultiplayerMode,
+} from "@/lib/screensaverConfig";
+import { MultiplayerProvider } from "@/context/MultiplayerContext";
+import { MultiplayerHud } from "./MultiplayerHud";
 import SolarSystemCanvas from "@/components/explorer/SolarSystemCanvas";
 import { MobileFlightControls } from "./MobileFlightControls";
 import { OptionsMenu } from "./OptionsMenu";
@@ -14,6 +21,7 @@ import { ScenicChromeController } from "./ScenicChromeController";
 import { ScreensaverBootstrap } from "./ScreensaverBootstrap";
 import { ScreensaverBootOverlay } from "./ScreensaverBootOverlay";
 import { ScreensaverBootGate } from "./ScreensaverErrorBoundary";
+import { ExplorerLegalFooter, NavigationHint } from "./ExplorerBottomChrome";
 import { GuideLog } from "./GuideLog";
 import { UtcClock } from "./UtcClock";
 
@@ -28,11 +36,21 @@ function isEditableTarget(target: EventTarget | null): boolean {
 }
 
 function GlobalShortcuts() {
-  const { dismissInfo, setMenuOpen, exitAutopilot, showLabels, setShowLabels } =
-    useExplorer();
+  const {
+    dismissInfo,
+    setMenuOpen,
+    exitAutopilot,
+    navigationActive,
+    showLabels,
+    setShowLabels,
+    showOrbits,
+    setShowOrbits,
+  } = useExplorer();
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
+      const websiteFlight = !isExtensionPackaged() && navigationActive;
+
       if (
         e.key.toLowerCase() === "l" &&
         !e.metaKey &&
@@ -42,6 +60,19 @@ function GlobalShortcuts() {
       ) {
         e.preventDefault();
         setShowLabels(!showLabels);
+        return;
+      }
+
+      if (
+        e.key.toLowerCase() === "o" &&
+        !e.metaKey &&
+        !e.ctrlKey &&
+        !e.altKey &&
+        !isEditableTarget(e.target)
+      ) {
+        if (websiteFlight) return;
+        e.preventDefault();
+        setShowOrbits(!showOrbits);
         return;
       }
 
@@ -60,38 +91,18 @@ function GlobalShortcuts() {
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [dismissInfo, setMenuOpen, exitAutopilot, showLabels, setShowLabels]);
+  }, [
+    dismissInfo,
+    setMenuOpen,
+    exitAutopilot,
+    navigationActive,
+    showLabels,
+    setShowLabels,
+    showOrbits,
+    setShowOrbits,
+  ]);
 
   return null;
-}
-
-function NavigationHint() {
-  const { navigationActive, discoveryAutopilotActive, scenicChromeVisible } =
-    useExplorer();
-  const mobileLandscape = useMobileLandscape();
-
-  if (navigationActive) return null;
-  if (discoveryAutopilotActive && !scenicChromeVisible) return null;
-
-  if (mobileLandscape) {
-    return (
-      <p
-        className="fixed bottom-4 left-1/2 z-30 max-w-[90vw] -translate-x-1/2 text-center text-[9px] tracking-widest uppercase text-zinc-600 pointer-events-none select-none"
-        aria-live="polite"
-      >
-        Left: thrust · drag up to L¹ / L² · Right: steer · Menu to exit
-      </p>
-    );
-  }
-
-  return (
-    <p
-      className="fixed bottom-5 left-1/2 -translate-x-1/2 z-30 text-[10px] tracking-widest uppercase text-zinc-600 pointer-events-none select-none"
-      aria-live="polite"
-    >
-      Click view to fly · Center dot selects · Tab exits flight · Space brake
-    </p>
-  );
 }
 
 function ExtensionMenuLink() {
@@ -118,6 +129,14 @@ function ExplorerShell() {
   const { navigationActive } = useExplorer();
   const mobileLandscape = useMobileLandscape();
   const screensaver = useScreensaverMode();
+  const extensionPremium = isExtensionPackaged();
+  const multiplayerEnabled = isMultiplayerMode();
+  const fullChrome = showExplorerChrome();
+  const showFlightHud = fullChrome && (!screensaver || navigationActive);
+  const showFullHud = showFlightHud && !extensionPremium;
+  const showWebsiteExplorer = !screensaver && !extensionPremium;
+  const showExtensionFlightHud = extensionPremium && navigationActive;
+  const showSpeedHud = extensionPremium ? showExtensionFlightHud : showFlightHud;
 
   return (
     <main
@@ -128,27 +147,34 @@ function ExplorerShell() {
       }`}
     >
       <SolarSystemCanvas />
-      {!screensaver && <MobileFlightControls />}
-      {!screensaver && <FlightReticle />}
-      {!screensaver && <UtcClock />}
-      {!screensaver && <SpeedHud />}
-      {!screensaver && <OptionsMenu />}
-      {!screensaver && <PlanetPanel />}
+      {showFullHud && <MobileFlightControls />}
+      {(showFullHud || showExtensionFlightHud) && <FlightReticle />}
+      {showFullHud && <UtcClock />}
+      {showSpeedHud && <SpeedHud />}
+      {showFullHud && <OptionsMenu />}
+      {showFullHud && <PlanetPanel />}
       {!screensaver && <GuideLog />}
-      {!screensaver && <NavigationHint />}
+      {showWebsiteExplorer && showFullHud && <NavigationHint />}
+      {showWebsiteExplorer && showFullHud && <ExplorerLegalFooter />}
       {!screensaver && <ExtensionMenuLink />}
+      {multiplayerEnabled ? <MultiplayerHud /> : null}
     </main>
   );
 }
 
 function ExplorerChrome() {
   const screensaver = useScreensaverMode();
+  const extensionPremium = isExtensionPackaged();
+  const fullChrome = showExplorerChrome();
+  const { navigationActive } = useExplorer();
+  const showFlightHud = fullChrome && (!screensaver || navigationActive);
+  const showFullHud = showFlightHud && !extensionPremium;
 
   return (
     <>
       <ScreensaverBootstrap />
-      {!screensaver && <GlobalShortcuts />}
-      {!screensaver && <ScenicChromeController />}
+      {showFullHud && <GlobalShortcuts />}
+      {fullChrome && <ScenicChromeController />}
       <ExplorerShell />
       <ScreensaverBootOverlay />
     </>
@@ -156,10 +182,14 @@ function ExplorerChrome() {
 }
 
 export function ExplorerView() {
+  const multiplayerEnabled = isMultiplayerMode();
+
   return (
     <ScreensaverBootGate>
       <ExplorerProvider>
-        <ExplorerChrome />
+        <MultiplayerProvider enabled={multiplayerEnabled}>
+          <ExplorerChrome />
+        </MultiplayerProvider>
       </ExplorerProvider>
     </ScreensaverBootGate>
   );

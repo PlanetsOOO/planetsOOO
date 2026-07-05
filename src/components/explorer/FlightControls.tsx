@@ -42,6 +42,7 @@ import {
 import { markIdleOrbitUserActivity, idleOrbitState } from "@/lib/idleOrbitState";
 import { discoveryAutopilotState, markDiscoveryPovActivity } from "@/lib/discoveryAutopilot";
 import { flightReticleState } from "@/lib/flightReticleState";
+import { isExtensionPackaged, isExtensionScreensaverFlight } from "@/lib/screensaverConfig";
 import { RENDER_FRAME_PRIORITY } from "@/lib/renderFramePriority";
 import { viewerPosition } from "@/lib/viewerState";
 import { lightspeedState, resetLightspeedState } from "@/lib/warpState";
@@ -133,15 +134,19 @@ export function FlightControls({
     setLightspeedActive,
     selectReticleTarget,
     interruptRouteNavigation,
+    interruptExtensionFlightTransit,
     exitAutopilot,
     markScenicChromeActivity,
     markFlightReticleActivity,
+    showOrbits,
+    setShowOrbits,
   } = useExplorer();
   const travelSpeedRef = useRef(travelSpeed);
   const routeActiveRef = useRef(routeActive);
   const autoNavigatingRef = useRef(autoNavigating);
   const discoveryActiveRef = useRef(discoveryAutopilotActive);
   const navigationActiveRef = useRef(navigationActive);
+  const showOrbitsRef = useRef(showOrbits);
   const velocity = useRef(new THREE.Vector3());
   const acceleration = useRef(new THREE.Vector3());
   const targetAccel = useRef(new THREE.Vector3());
@@ -169,6 +174,10 @@ export function FlightControls({
   }, [routeActive, autoNavigating, discoveryAutopilotActive, navigationActive]);
 
   useEffect(() => {
+    showOrbitsRef.current = showOrbits;
+  }, [showOrbits]);
+
+  useEffect(() => {
     const el = gl.domElement;
 
     const trackKey = (key: string, down: boolean) => {
@@ -181,6 +190,21 @@ export function FlightControls({
 
       const key = e.key.toLowerCase();
       const routeTrip = routeActiveRef.current && autoNavigatingRef.current;
+      const modified = e.metaKey || e.ctrlKey || e.altKey;
+
+      if (
+        !isExtensionPackaged() &&
+        navigationActiveRef.current &&
+        !modified &&
+        key === "o"
+      ) {
+        e.preventDefault();
+        const next = !showOrbitsRef.current;
+        showOrbitsRef.current = next;
+        setShowOrbits(next);
+        markFlightReticleActivity();
+        return;
+      }
 
       if (["w", "a", "s", "d", " ", "shift"].includes(key)) {
         if (!discoveryActiveRef.current) {
@@ -198,6 +222,26 @@ export function FlightControls({
         flightRef.current.speedKmPerSec = 0;
         autoNavigatingRef.current = false;
         routeActiveRef.current = false;
+      }
+
+      const extensionFlightTransit =
+        isExtensionScreensaverFlight(navigationActiveRef.current) &&
+        autoNavigatingRef.current &&
+        !routeActiveRef.current;
+
+      if (extensionFlightTransit && ["w", "a", "s", "d"].includes(key)) {
+        e.preventDefault();
+        interruptExtensionFlightTransit();
+        velocity.current.set(0, 0, 0);
+        acceleration.current.set(0, 0, 0);
+        flightRef.current.velocity.set(0, 0, 0);
+        flightRef.current.acceleration.set(0, 0, 0);
+        flightRef.current.speed = 0;
+        flightRef.current.speedKmPerSec = 0;
+        autoNavigatingRef.current = false;
+        discoveryActiveRef.current = false;
+        trackKey(key, true);
+        return;
       }
 
       if (
@@ -293,16 +337,26 @@ export function FlightControls({
     const onClick = () => {
       if (mobileTouchState.enabled) return;
       const routeTrip = routeActiveRef.current && autoNavigatingRef.current;
-      if (autoNavigatingRef.current && !routeTrip) return;
+      const extensionFlight = isExtensionScreensaverFlight(
+        navigationActiveRef.current,
+      );
+      if (autoNavigatingRef.current && !routeTrip && !extensionFlight) return;
       if (document.pointerLockElement === el) return;
-      setNavigationActive(true);
+      if (!extensionFlight) {
+        setNavigationActive(true);
+      }
       requestPointerLockIfSupported(el);
     };
 
     const onPointerLockChange = () => {
       if (mobileTouchState.enabled) return;
       const locked = document.pointerLockElement === el;
-      setNavigationActive(locked);
+      const extensionFlight = isExtensionScreensaverFlight(
+        navigationActiveRef.current,
+      );
+      if (!extensionFlight) {
+        setNavigationActive(locked);
+      }
       if (!locked) {
         keys.current.clear();
         clearInputKeys();
@@ -319,12 +373,15 @@ export function FlightControls({
         discoveryActiveRef.current &&
         discoveryAutopilotState.phase === "orbit";
       const pointerLocked = document.pointerLockElement === el;
+      const extensionFlight = isExtensionScreensaverFlight(
+        navigationActiveRef.current,
+      );
       const canLook =
         pointerLocked ||
         (routeTrip && routeDragLook.current) ||
         (discoveryOrbit && discoveryOrbitDragLook.current);
 
-      if (autoNavigatingRef.current && !routeTrip) return;
+      if (autoNavigatingRef.current && !routeTrip && !extensionFlight) return;
       if (!canLook) return;
 
       if (Math.abs(e.movementX) + Math.abs(e.movementY) > 0) {
@@ -356,12 +413,15 @@ export function FlightControls({
         discoveryActiveRef.current &&
         discoveryAutopilotState.phase === "orbit";
       const pointerLocked = document.pointerLockElement === el;
+      const extensionFlight = isExtensionScreensaverFlight(
+        navigationActiveRef.current,
+      );
       const canLook =
         pointerLocked ||
         (routeTrip && routeDragLook.current) ||
         (discoveryOrbit && discoveryOrbitDragLook.current);
 
-      if (autoNavigatingRef.current && !routeTrip) return;
+      if (autoNavigatingRef.current && !routeTrip && !extensionFlight) return;
       if (!canLook) return;
 
       const movement =
@@ -419,9 +479,11 @@ export function FlightControls({
     setLightspeedIntensity,
     selectReticleTarget,
     interruptRouteNavigation,
+    interruptExtensionFlightTransit,
     exitAutopilot,
     markScenicChromeActivity,
     markFlightReticleActivity,
+    setShowOrbits,
     yawRef,
     pitchRef,
     rollRef,

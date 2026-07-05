@@ -1,3 +1,4 @@
+import { LegalFooter } from "@/components/LegalFooter";
 import { PremiumSuccessClient } from "./PremiumSuccessClient";
 
 type PremiumSuccessSearchParams = Promise<{
@@ -36,6 +37,7 @@ export default async function PremiumSuccessPage({
             </p>
           </div>
         )}
+        <LegalFooter />
       </section>
     </main>
   );

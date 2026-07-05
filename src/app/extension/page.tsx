@@ -1,3 +1,5 @@
+import { LegalFooter } from "@/components/LegalFooter";
+
 export default function ExtensionDownloadPage() {
   return (
     <main className="min-h-screen bg-[#030508] px-6 py-10 text-zinc-200">
@@ -50,14 +52,7 @@ export default function ExtensionDownloadPage() {
           </button>
         </div>
 
-        <p className="mt-10 text-center text-xs text-zinc-600">
-          <a
-            href="/privacy"
-            className="text-zinc-500 underline underline-offset-2 hover:text-zinc-400"
-          >
-            Privacy policy
-          </a>
-        </p>
+        <LegalFooter />
       </section>
     </main>
   );

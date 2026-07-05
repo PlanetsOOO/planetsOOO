@@ -1,3 +1,4 @@
+import { LegalFooter } from "@/components/LegalFooter";
 import { redirect } from "next/navigation";
 
 type PremiumPageSearchParams = Promise<{
@@ -74,14 +75,9 @@ export default async function PremiumPage({ searchParams }: PremiumPageProps) {
         </div>
 
         <p className="mt-10 text-center text-xs text-zinc-600">
-          Payments processed by Stripe.{" "}
-          <a
-            href="/privacy"
-            className="text-zinc-500 underline underline-offset-2 hover:text-zinc-400"
-          >
-            Privacy policy
-          </a>
+          Payments processed by Stripe.
         </p>
+        <LegalFooter />
       </section>
     </main>
   );
