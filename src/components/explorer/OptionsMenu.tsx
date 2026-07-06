@@ -3,6 +3,7 @@
 import { useEffect, useRef, type SyntheticEvent } from "react";
 import { useExplorer } from "@/context/ExplorerContext";
 import { discoveryAutopilotState } from "@/lib/discoveryAutopilot";
+import { isExtensionPackaged } from "@/lib/screensaverConfig";
 import { PlanetSearch } from "./PlanetSearch";
 import { RoutePathPlanner } from "./RoutePathPlanner";
 
@@ -10,6 +11,7 @@ export function OptionsMenu() {
   const {
     menuOpen,
     setMenuOpen,
+    navigationActive,
     showOrbits,
     setShowOrbits,
     showLabels,
@@ -32,6 +34,13 @@ export function OptionsMenu() {
     setAiEnhanced,
   } = useExplorer();
   const panelRef = useRef<HTMLDivElement>(null);
+  const website = !isExtensionPackaged();
+  // Website: menu only in tab/browse mode (before flight or after Tab exit).
+  const menuAvailable = !website || !navigationActive;
+
+  useEffect(() => {
+    if (!menuAvailable && menuOpen) setMenuOpen(false);
+  }, [menuAvailable, menuOpen, setMenuOpen]);
 
   useEffect(() => {
     if (!menuOpen) return;
@@ -50,6 +59,9 @@ export function OptionsMenu() {
   const scenicTourActive =
     discoveryAutopilotActive || discoveryAutopilotState.active;
   const hideChrome = scenicTourActive && !scenicChromeVisible;
+
+  if (!menuAvailable) return null;
+
   const stopMenuEvent = (event: SyntheticEvent) => {
     event.stopPropagation();
   };
@@ -96,7 +108,7 @@ export function OptionsMenu() {
             disabled={routeActive}
           />
           <Toggle
-            label="AI enhanced"
+            label="Guide"
             checked={aiEnhanced}
             onChange={setAiEnhanced}
           />

@@ -13,7 +13,7 @@ import {
   syncBodyLabelPick,
 } from "@/lib/bodyLabelPick";
 import { flightReticleState } from "@/lib/flightReticleState";
-import { isExtensionPackaged } from "@/lib/screensaverConfig";
+import { isExtensionScreensaverFlight } from "@/lib/screensaverConfig";
 
 const VIEW_MARGIN = 0.02;
 const LABEL_OVERLAP_PADDING_PX = 3;
@@ -232,8 +232,7 @@ export function BodyLabel({
     _bodyNdc.copy(_bodyCenter).project(camera);
     labelGroup.getWorldPosition(_labelWorld);
 
-    const extensionFlight =
-      isExtensionPackaged() && navigationActive;
+    const extensionFlight = isExtensionScreensaverFlight(navigationActive);
     const flightLabelMode = navigationActive && showLabels;
     const onScreen =
       bodyInView(_bodyNdc) &&

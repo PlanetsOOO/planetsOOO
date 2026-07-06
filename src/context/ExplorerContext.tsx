@@ -23,11 +23,18 @@ import {
   resetDiscoveryAutopilotState,
   markDiscoveryDeparture,
   resetDiscoveryLegLock,
+  markExtensionFlightHandoff,
+  clearExtensionFlightHandoff,
 } from "@/lib/discoveryAutopilot";
 import { resetRouteTourState } from "@/lib/routeTour";
 import { FLIGHT_RETICLE_IDLE_MS, SCENIC_CHROME_IDLE_MS } from "@/lib/scenicChrome";
 import { flightReticleState } from "@/lib/flightReticleState";
-import { isExtensionPackaged, isScreensaverMode, isMultiplayerMode } from "@/lib/screensaverConfig";
+import {
+  isExtensionPackaged,
+  isScreensaverFlightCapable,
+  isScreensaverMode,
+  isMultiplayerMode,
+} from "@/lib/screensaverConfig";
 import { activateScreensaverScenicTour } from "@/lib/screensaverScenic";
 
 interface ExplorerState {
@@ -343,6 +350,7 @@ export function ExplorerProvider({ children }: { children: ReactNode }) {
       discoveryAutopilotState.currentTargetId = target;
       discoveryAutopilotState.queuedTargetId = null;
       discoveryAutopilotState.searchFocusLocked = false;
+      clearExtensionFlightHandoff();
       discoveryAutopilotState.orbitStartedMs = 0;
       discoveryAutopilotState.departStartedMs = 0;
       discoveryAutopilotState.focusLookBlend = 0;
@@ -487,6 +495,7 @@ export function ExplorerProvider({ children }: { children: ReactNode }) {
 
   const interruptExtensionFlightTransit = useCallback(() => {
     discoveryAutopilotState.searchFocusLocked = false;
+    clearExtensionFlightHandoff();
     resetDiscoveryLegLock();
     resetDiscoveryAutopilotState();
     setDiscoveryAutopilotActiveState(false);
@@ -498,8 +507,8 @@ export function ExplorerProvider({ children }: { children: ReactNode }) {
 
   const navigateToTarget = useCallback(
     (id: NavTargetId) => {
-      const wasExtensionFlight =
-        isExtensionPackaged() && navigationActiveRef.current;
+      const wasScreensaverFlight =
+        isScreensaverFlightCapable() && navigationActiveRef.current;
 
       cancelRoute();
       setMenuOpen(false);
@@ -523,7 +532,8 @@ export function ExplorerProvider({ children }: { children: ReactNode }) {
         });
       }
 
-      if (wasExtensionFlight) {
+      if (wasScreensaverFlight) {
+        markExtensionFlightHandoff();
         if (document.pointerLockElement) {
           document.exitPointerLock();
         }
@@ -542,7 +552,10 @@ export function ExplorerProvider({ children }: { children: ReactNode }) {
   const selectReticleTarget = useCallback(
     (id: NavTargetId) => {
       markIdleOrbitUserActivity();
-      if (isExtensionPackaged() || flightReticleState.viaLabel) {
+      if (
+        (isScreensaverFlightCapable() && navigationActiveRef.current) ||
+        flightReticleState.viaLabel
+      ) {
         navigateToTarget(id);
         return;
       }

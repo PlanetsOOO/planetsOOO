@@ -14,8 +14,10 @@ export function activateScreensaverScenicTour(): boolean {
 
   if (
     discoveryAutopilotState.active &&
-    discoveryAutopilotState.phase === "orbit" &&
-    discoveryAutopilotState.currentTargetId
+    discoveryAutopilotState.currentTargetId &&
+    (discoveryAutopilotState.phase === "orbit" ||
+      discoveryAutopilotState.phase === "transit" ||
+      discoveryAutopilotState.phase === "depart")
   ) {
     return true;
   }

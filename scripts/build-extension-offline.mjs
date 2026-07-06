@@ -107,6 +107,10 @@ await build({
   alias: {
     ...sharedBuildOptions.alias,
     three: path.join(srcDir, "lib/threeExtensionShim.ts"),
+    "next/link": path.join(extensionDir, "offline-app", "nextLinkShim.tsx"),
+  },
+  banner: {
+    js: 'if(typeof globalThis.process=="undefined"){globalThis.process={env:{NODE_ENV:"production"}};}',
   },
   define: {
     "process.env.NODE_ENV": "\"production\"",

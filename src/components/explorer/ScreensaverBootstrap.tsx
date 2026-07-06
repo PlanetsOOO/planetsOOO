@@ -3,9 +3,12 @@
 import { useCallback, useEffect, useLayoutEffect, useRef } from "react";
 import type { NavTargetId } from "@/data/navigationTargets";
 import { useExplorer } from "@/context/ExplorerContext";
-import { discoveryAutopilotState } from "@/lib/discoveryAutopilot";
+import {
+  discoveryAutopilotState,
+  pickClosestNavTarget,
+  markExtensionFlightShellExited,
+} from "@/lib/discoveryAutopilot";
 import { idleOrbitState } from "@/lib/idleOrbitState";
-import { pickClosestNavTarget } from "@/lib/discoveryAutopilot";
 import { readScreensaverConfig, isExtensionPackaged } from "@/lib/screensaverConfig";
 import { activateScreensaverPresentation } from "@/lib/screensaverPresentation";
 import { activateScreensaverScenicTour } from "@/lib/screensaverScenic";
@@ -123,6 +126,11 @@ export function ScreensaverBootstrap() {
     startScenicTour();
   }, [screensaver, startScenicTour]);
 
+  useLayoutEffect(() => {
+    if (!screensaver) return;
+    return activateScreensaverPresentation();
+  }, [screensaver]);
+
   useEffect(() => {
     if (!screensaver) return;
 
@@ -137,11 +145,6 @@ export function ScreensaverBootstrap() {
 
   useEffect(() => {
     if (!screensaver) return;
-    return activateScreensaverPresentation();
-  }, [screensaver]);
-
-  useEffect(() => {
-    if (!screensaver) return;
 
     const clearFlightIdleTimer = () => {
       if (flightIdleTimerRef.current) {
@@ -150,7 +153,36 @@ export function ScreensaverBootstrap() {
       }
     };
 
-    const returnToScenicTour = () => {
+    const exitFlightShellOnly = () => {
+      flightActiveRef.current = false;
+      notifyScreensaverFlightMode(false);
+      notifyScreensaverSpeedTracker(false, 0, 0, speedUnitRef.current);
+      clearFlightIdleTimer();
+      setNavigationActive(false);
+      showLabelsRef.current = false;
+      setShowLabels(false);
+      showOrbitsRef.current = false;
+      setShowOrbits(false);
+      if (document.pointerLockElement) {
+        document.exitPointerLock();
+      }
+      markExtensionFlightShellExited();
+    };
+
+    const returnToScenicTour = (manual = false) => {
+      const scenicHandoff =
+        !manual &&
+        discoveryAutopilotState.extensionFlightHandoff &&
+        discoveryAutopilotState.active &&
+        (discoveryAutopilotState.phase === "transit" ||
+          discoveryAutopilotState.phase === "orbit" ||
+          discoveryAutopilotState.phase === "depart");
+
+      if (scenicHandoff) {
+        exitFlightShellOnly();
+        return;
+      }
+
       flightActiveRef.current = false;
       flightEnteredRef.current = false;
       notifyScreensaverFlightMode(false);
@@ -242,7 +274,7 @@ export function ScreensaverBootstrap() {
         e.preventDefault();
         e.stopImmediatePropagation();
         if (e.repeat) return;
-        returnToScenicTour();
+        returnToScenicTour(true);
         return;
       }
 
@@ -276,6 +308,7 @@ export function ScreensaverBootstrap() {
     };
 
     const onExtensionFlightNavigate = () => {
+      returnTargetRef.current = discoveryAutopilotState.currentTargetId;
       clearFlightIdleTimer();
       markFlightActivity();
     };

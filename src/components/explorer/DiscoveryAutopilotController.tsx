@@ -26,6 +26,7 @@ import {
   hasDiscoveryCompletedFullOrbit,
   isDiscoveryOrbitLookAheadActive,
   markDiscoveryLegAdvancePending,
+  releaseExtensionFlightSearchFocusIfReady,
   shouldDiscoveryAutopilotControlPov,
   syncDiscoveryFocusFromPov,
   updateDiscoveryDepartLookBlend,
@@ -213,7 +214,9 @@ export function DiscoveryAutopilotController({
       ensureDiscoveryQueuedTarget();
 
       const currentPos = resolveBodyPosition(orbitId);
-      const queuedId = discoveryAutopilotState.queuedTargetId;
+      const queuedId = discoveryAutopilotState.searchFocusLocked
+        ? null
+        : discoveryAutopilotState.queuedTargetId;
       const queuedPos = queuedId ? resolveBodyPosition(queuedId) : null;
       if (!currentPos) return;
 
@@ -280,7 +283,9 @@ export function DiscoveryAutopilotController({
     ensureDiscoveryQueuedTarget();
 
     const currentPos = resolveBodyPosition(orbitId);
-    const queuedId = discoveryAutopilotState.queuedTargetId;
+    const queuedId = discoveryAutopilotState.searchFocusLocked
+      ? null
+      : discoveryAutopilotState.queuedTargetId;
     const queuedPos = queuedId ? resolveBodyPosition(queuedId) : null;
 
     applyOrbitMotion(orbitId, dt);
@@ -362,6 +367,8 @@ export function DiscoveryAutopilotController({
     ) {
       beginDiscoveryDeparture();
     }
+
+    releaseExtensionFlightSearchFocusIfReady();
 
     const cam = camera as THREE.PerspectiveCamera;
     if ("fov" in cam) {

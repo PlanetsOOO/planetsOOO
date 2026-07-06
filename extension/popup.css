@@ -120,6 +120,22 @@ form {
   text-decoration: underline;
 }
 
+.account-notice {
+  margin: -0.1rem 0 0;
+  color: #a1a1aa;
+  font-size: 0.66rem;
+  line-height: 1.35;
+}
+
+.account-notice a {
+  color: #93c5fd;
+  text-decoration: none;
+}
+
+.account-notice a:hover {
+  text-decoration: underline;
+}
+
 .flight-controls {
   display: grid;
   gap: 0.15rem;

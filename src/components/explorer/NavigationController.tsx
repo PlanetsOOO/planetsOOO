@@ -144,6 +144,16 @@ export function NavigationController({
       return;
     }
 
+    // Discovery scenic owns orbit/departure — do not fall through to manual warp
+    // thrust while React autoNavigating lags one frame after scenic arrival.
+    if (
+      discoveryAutopilotState.active &&
+      (discoveryAutopilotState.phase === "orbit" ||
+        discoveryAutopilotState.phase === "depart")
+    ) {
+      return;
+    }
+
     const legMarker = discoveryAutopilotState.active
       ? `discovery:${discoveryAutopilotState.currentTargetId}`
       : `${routeLegIndex}:${navTargetId}`;

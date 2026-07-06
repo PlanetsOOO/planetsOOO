@@ -11,6 +11,9 @@ const DEFAULTS = {
   closeOnActive: false,
 };
 
+// Dev-only Premium bypass; package-extension.mjs sets false in store zips.
+const ALLOW_ADMIN_PREMIUM_OVERRIDE = true;
+
 let screensaverInstances = [];
 let fullscreenRetryTimer = null;
 let fullscreenRecoveryTimer = null;
@@ -252,23 +255,28 @@ async function saveDebug(info) {
 
 async function getSettings() {
   const stored = await chrome.storage.sync.get(DEFAULTS);
-  const local = await chrome.storage.local.get({
-    adminPremiumOverride: false,
-    premiumEntitlement: "",
-  });
+  const local = await chrome.storage.local.get(
+    ALLOW_ADMIN_PREMIUM_OVERRIDE
+      ? { adminPremiumOverride: false, premiumEntitlement: "" }
+      : { premiumEntitlement: "" },
+  );
   const hasEntitlement =
     typeof local.premiumEntitlement === "string" &&
     local.premiumEntitlement.length > 0;
   const plan =
-    local.adminPremiumOverride || (stored.plan === "premium" && hasEntitlement)
+    (ALLOW_ADMIN_PREMIUM_OVERRIDE && local.adminPremiumOverride) ||
+    (stored.plan === "premium" && hasEntitlement)
       ? "premium"
       : "basic";
-  return {
+  const settings = {
     ...DEFAULTS,
     ...stored,
     plan,
-    adminPremiumOverride: Boolean(local.adminPremiumOverride),
   };
+  if (ALLOW_ADMIN_PREMIUM_OVERRIDE) {
+    settings.adminPremiumOverride = Boolean(local.adminPremiumOverride);
+  }
+  return settings;
 }
 
 async function applyIdleInterval() {
@@ -1098,7 +1106,9 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
           displayIds: settings.displayIds,
           allowMultipleDisplays: settings.allowMultipleDisplays,
           plan: settings.plan,
-          adminPremiumOverride: settings.adminPremiumOverride,
+          ...(ALLOW_ADMIN_PREMIUM_OVERRIDE
+            ? { adminPremiumOverride: settings.adminPremiumOverride }
+            : {}),
           flightKey: settings.flightKey,
           exitKey: settings.exitKey,
           running: screensaverInstances.length > 0,

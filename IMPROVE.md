@@ -117,6 +117,7 @@ Keep the last ~10 entries. Delete rows that no longer teach you anything.
 | 2026-06-16 | Extension needed native-grade stability and security | Sender validation, CSP, HEAD probe, pause WebGL when hidden | Preview/close only from trusted extension/screensaver paths |
 | 2026-06-16 | three.js r183 deprecation spam in extension console | R3F `shadows="percentage"` + Clock compat shim before Canvas | chrome://extensions console stays clean on Preview |
 | 2026-06-16 | **Milestone: Premium extension flight** | Pointer-lock flight, L-toggle labels, reticle label travel, transit look (click) + WASD interrupt, exit key/idle only | Reload extension; run 7-item flight checklist |
+| 2026-07-06 | Offline React screensaver blank + exit dead | `process` polyfill + `next/link` shim in offline bundle; CSP-safe boot-error.js | `node scripts/verify-extension-react.mjs` after `npm run build:extension-offline` |
 
 ---
 

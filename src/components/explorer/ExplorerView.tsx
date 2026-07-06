@@ -139,13 +139,13 @@ function ExplorerShell() {
   const showWebsiteExplorer = !screensaver && !extensionPremium;
   const showExtensionFlightHud = extensionPremium && navigationActive;
   const showSpeedHud = extensionPremium ? showExtensionFlightHud : showFlightHud;
+  const hideCursor =
+    !mobileLandscape && (screensaver || navigationActive);
 
   return (
     <main
       className={`relative h-screen w-full overflow-hidden bg-[#030508] ${
-        navigationActive && !mobileLandscape && !screensaver
-          ? "cursor-none"
-          : "cursor-default"
+        hideCursor ? "cursor-none" : "cursor-default"
       }`}
     >
       <SolarSystemCanvas />

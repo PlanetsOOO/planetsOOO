@@ -11,6 +11,9 @@ const DEFAULTS = {
   closeOnActive: false,
 };
 
+// Dev-only Premium bypass; package-extension.mjs sets false in store zips.
+const ALLOW_ADMIN_PREMIUM_OVERRIDE = true;
+
 const form = document.getElementById("settings");
 const enabledEl = document.getElementById("enabled");
 const idleMinutesEl = document.getElementById("idleMinutes");
@@ -22,9 +25,9 @@ const flightKeyEl = document.getElementById("flightKey");
 const exitKeyEl = document.getElementById("exitKey");
 const closeOnActiveEl = document.getElementById("closeOnActive");
 const premiumLinkEl = document.getElementById("premiumLink");
+const accountNoticeEl = document.getElementById("accountNotice");
 const accountLinkEl = document.getElementById("accountLink");
 const extensionLinkEl = document.getElementById("extensionLink");
-const multiplayerLinkEl = document.getElementById("multiplayerLink");
 const saveBtn = document.getElementById("save");
 const previewBtn = document.getElementById("preview");
 const closeBtn = document.getElementById("close");
@@ -62,11 +65,6 @@ async function updateAccountLinks() {
     url.searchParams.set("extensionId", chrome.runtime.id);
     url.searchParams.set("installId", installId);
     extensionLinkEl.href = url.toString();
-  }
-  if (multiplayerLinkEl) {
-    const url = new URL("/", DEFAULTS.siteUrl);
-    url.searchParams.set("multiplayer", "1");
-    multiplayerLinkEl.href = url.toString();
   }
 }
 
@@ -142,20 +140,23 @@ function applyPlanState(settings) {
   flightSectionEl.classList.toggle("is-basic", !premium);
   flightKeyEl.disabled = !premium;
   exitKeyEl.disabled = !premium;
+  if (accountNoticeEl) accountNoticeEl.hidden = !premium;
 }
 
 async function loadSettings() {
   const settings = { ...DEFAULTS, ...(await chrome.storage.sync.get(DEFAULTS)) };
-  const local = await chrome.storage.local.get({
-    adminPremiumOverride: false,
-    premiumEntitlement: "",
-  });
+  const local = await chrome.storage.local.get(
+    ALLOW_ADMIN_PREMIUM_OVERRIDE
+      ? { adminPremiumOverride: false, premiumEntitlement: "" }
+      : { premiumEntitlement: "" },
+  );
   const displays = await getDisplays();
   const hasEntitlement =
     typeof local.premiumEntitlement === "string" &&
     local.premiumEntitlement.length > 0;
   currentPlan =
-    local.adminPremiumOverride || (settings.plan === "premium" && hasEntitlement)
+    (ALLOW_ADMIN_PREMIUM_OVERRIDE && local.adminPremiumOverride) ||
+    (settings.plan === "premium" && hasEntitlement)
       ? "premium"
       : "basic";
 

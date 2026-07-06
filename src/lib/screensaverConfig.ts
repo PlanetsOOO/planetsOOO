@@ -24,9 +24,19 @@ export function isExtensionPackaged(): boolean {
   return window.location.protocol === "chrome-extension:";
 }
 
-/** Extension screensaver with manual flight still active. */
+/**
+ * Premium screensaver with manual flight (?screensaver=1&flight=1).
+ * True for extension-hosted planets.ooo tabs and packaged offline React.
+ */
+export function isScreensaverFlightCapable(): boolean {
+  if (typeof window === "undefined") return false;
+  if (!isScreensaverMode()) return false;
+  return readScreensaverConfig().flightEnabled;
+}
+
+/** Screensaver manual flight active (extension online, packaged offline, or same URL params). */
 export function isExtensionScreensaverFlight(navigationActive: boolean): boolean {
-  return isExtensionPackaged() && isScreensaverMode() && navigationActive;
+  return isScreensaverFlightCapable() && navigationActive;
 }
 
 /** Multiplayer requested via ?multiplayer=1 on web or extension when online. */

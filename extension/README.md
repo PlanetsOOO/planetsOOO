@@ -70,7 +70,10 @@ For a dev zip that retains localhost permissions:
 npm run package:extension:dev
 ```
 
-## Admin Premium Override
+## Admin Premium Override (dev builds only)
+
+Unpacked `extension/` and `--dev` zips keep `ALLOW_ADMIN_PREMIUM_OVERRIDE = true`.
+Store zips flip it to `false` during packaging so Premium cannot be bypassed.
 
 For local testing before payments are wired, set this in the extension service
 worker console. This is a local testing hook, not the payment unlock path:

@@ -33,7 +33,6 @@ const proc = spawn(
   chrome,
   [
     `--user-data-dir=${userDataDir}`,
-    `--disable-extensions-except=${extensionDir}`,
     `--load-extension=${extensionDir}`,
     `--remote-debugging-port=${debugPort}`,
     "--no-first-run",

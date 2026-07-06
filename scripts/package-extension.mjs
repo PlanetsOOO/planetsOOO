@@ -55,6 +55,7 @@ const INCLUDE = [
   "screensaver-react.html",
   "screensaver-react.css",
   "screensaver-react.js",
+  "offline-app/boot-error.js",
   "icons",
   "data",
   "textures",
@@ -62,6 +63,31 @@ const INCLUDE = [
 
 const argv = process.argv.slice(2);
 const packageDev = argv.includes("--dev");
+
+const ADMIN_OVERRIDE_FLAG =
+  "const ALLOW_ADMIN_PREMIUM_OVERRIDE = true;";
+const ADMIN_OVERRIDE_FLAG_OFF =
+  "const ALLOW_ADMIN_PREMIUM_OVERRIDE = false;";
+
+const STORE_JS_TRANSFORMS = new Set(["background.js", "popup.js"]);
+
+function copyExtensionEntry(entry, destPath) {
+  const srcPath = path.join(extensionDir, entry);
+  if (!packageDev && STORE_JS_TRANSFORMS.has(entry)) {
+    const content = readFileSync(srcPath, "utf8");
+    if (!content.includes(ADMIN_OVERRIDE_FLAG)) {
+      throw new Error(
+        `${entry} is missing ALLOW_ADMIN_PREMIUM_OVERRIDE — store strip would fail`,
+      );
+    }
+    writeFileSync(
+      destPath,
+      content.replace(ADMIN_OVERRIDE_FLAG, ADMIN_OVERRIDE_FLAG_OFF),
+    );
+    return;
+  }
+  cpSync(srcPath, destPath, { recursive: true });
+}
 
 function parseVersionArg(args) {
   if (args.includes("--no-bump")) return { mode: "none" };
@@ -139,9 +165,7 @@ mkdirSync(stageDir, { recursive: true });
 
 for (const entry of INCLUDE) {
   if (entry === "manifest.json") continue;
-  cpSync(path.join(extensionDir, entry), path.join(stageDir, entry), {
-    recursive: true,
-  });
+  copyExtensionEntry(entry, path.join(stageDir, entry));
 }
 
 writeManifest(path.join(stageDir, "manifest.json"), packagedManifest);

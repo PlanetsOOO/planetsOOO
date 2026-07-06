@@ -99,10 +99,44 @@ export const discoveryAutopilotState = {
   legAdvancePending: false,
   /** Search bar selection — orbit one body until another pick or Tab. */
   searchFocusLocked: false,
+  /** Extension flight label pick — scenic leg must finish before a new tour starts. */
+  extensionFlightHandoff: false,
+  /** Flight idle timer dropped controls during an extension handoff transit. */
+  extensionFlightShellExited: false,
 };
 
 export function isSearchFocusActive(): boolean {
   return discoveryAutopilotState.searchFocusLocked;
+}
+
+export function markExtensionFlightHandoff(): void {
+  discoveryAutopilotState.extensionFlightHandoff = true;
+  discoveryAutopilotState.extensionFlightShellExited = false;
+}
+
+export function markExtensionFlightShellExited(): void {
+  if (!discoveryAutopilotState.extensionFlightHandoff) return;
+  discoveryAutopilotState.extensionFlightShellExited = true;
+}
+
+export function releaseExtensionFlightSearchFocusIfReady(now = Date.now()): void {
+  if (!discoveryAutopilotState.extensionFlightHandoff) return;
+  if (!discoveryAutopilotState.extensionFlightShellExited) return;
+  if (!discoveryAutopilotState.searchFocusLocked) return;
+  if (discoveryAutopilotState.phase !== "orbit") return;
+  if (orbitElapsedSec(now) < SCENIC_ORBIT_MIN_SEC) return;
+
+  discoveryAutopilotState.searchFocusLocked = false;
+  discoveryAutopilotState.extensionFlightHandoff = false;
+  discoveryAutopilotState.extensionFlightShellExited = false;
+  if (!discoveryAutopilotState.queuedTargetId) {
+    queueNextDiscoveryTarget();
+  }
+}
+
+export function clearExtensionFlightHandoff(): void {
+  discoveryAutopilotState.extensionFlightHandoff = false;
+  discoveryAutopilotState.extensionFlightShellExited = false;
 }
 
 const _approach = new THREE.Vector3();
@@ -804,6 +838,7 @@ export function resetDiscoveryAutopilotState(): void {
   resetDiscoveryOrbitFov();
   resetDiscoveryLegLock();
   discoveryAutopilotState.searchFocusLocked = false;
+  clearExtensionFlightHandoff();
   resetEarthApproach();
 }
 
@@ -851,6 +886,8 @@ export function beginDiscoveryOrbitPhase(): void {
   ) {
     queueNextDiscoveryTarget();
   }
+
+  releaseExtensionFlightSearchFocusIfReady();
 }
 
 export function markDiscoveryLegAdvancePending(): boolean {
