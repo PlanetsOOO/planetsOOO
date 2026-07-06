@@ -20,6 +20,9 @@ import { IdleOrbitController } from "./IdleOrbitController";
 import { DiscoveryAutopilotController } from "./DiscoveryAutopilotController";
 import { EarthApproachController } from "./EarthApproachController";
 import { FlightTargetSelector } from "./FlightTargetSelector";
+import { MultiplayerController } from "./MultiplayerController";
+import { RemotePlayerMarkers } from "./RemotePlayerMarkers";
+import { isMultiplayerMode } from "@/lib/screensaverConfig";
 import { initialSpawnAngles } from "@/lib/viewerState";
 
 export function SolarSystemScene() {
@@ -30,6 +33,7 @@ export function SolarSystemScene() {
   const rollRef = useRef(0);
 
   const bodies = useMemo(() => PLANETS.filter((p) => p.id !== "sun"), []);
+  const multiplayerEnabled = isMultiplayerMode();
 
   return (
     <>
@@ -57,6 +61,7 @@ export function SolarSystemScene() {
         ))}
 
         <MoonMesh />
+        {multiplayerEnabled ? <RemotePlayerMarkers /> : null}
       </FloatingOrigin>
 
       <FlightControls
@@ -81,6 +86,9 @@ export function SolarSystemScene() {
         pitchRef={pitchRef}
         rollRef={rollRef}
       />
+      {multiplayerEnabled ? (
+        <MultiplayerController yawRef={yawRef} pitchRef={pitchRef} />
+      ) : null}
       <NavigationController
         flightRef={flightRef}
         yawRef={yawRef}

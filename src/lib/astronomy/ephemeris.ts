@@ -1,6 +1,7 @@
 import type { PlanetId } from "@/data/planets";
 import { ASTRONOMY } from "@/data/astronomy";
 import { auToUnits } from "@/lib/astronomy/scale";
+import { getSimulationDate } from "@/lib/simulationTime";
 
 /** J2000 osculating elements — NASA/JPL Planetary Fact Sheet (heliocentric ecliptic). */
 export interface KeplerianElements {
@@ -169,17 +170,18 @@ export function getHeliocentricPosition(
 export function sampleOrbitPath(
   id: Exclude<PlanetId, "sun">,
   segments: number,
+  date = getSimulationDate(),
 ): Float32Array {
   const el = ORBITAL_ELEMENTS[id];
-  const epoch = J2000;
+  const startDays = julianDate(date) - J2000;
   const out = new Float32Array((segments + 1) * 3);
   const pos = { x: 0, y: 0, z: 0 };
 
   for (let i = 0; i <= segments; i++) {
-    const days = (i / segments) * el.periodDays;
-    const jd = epoch + days;
-    const date = new Date((jd - 2_440_587.5) * 86_400_000);
-    getHeliocentricPosition(id, 0, date, pos);
+    const days = startDays + (i / segments) * el.periodDays;
+    const jd = J2000 + days;
+    const sampleDate = new Date((jd - 2_440_587.5) * 86_400_000);
+    getHeliocentricPosition(id, 0, sampleDate, pos);
     out[i * 3] = pos.x;
     out[i * 3 + 1] = pos.y;
     out[i * 3 + 2] = pos.z;

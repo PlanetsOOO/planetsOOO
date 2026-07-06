@@ -3,6 +3,7 @@
 import { useExplorer } from "@/context/ExplorerContext";
 import { LUDICROUS_SPEED_MULTIPLIER } from "@/lib/lightspeed";
 import { formatScenicLightspeedMultiple } from "@/lib/scenicTransit";
+import { isExtensionPackaged } from "@/lib/screensaverConfig";
 import { lightspeedState } from "@/lib/warpState";
 
 export function SpeedHud() {
@@ -25,6 +26,8 @@ export function SpeedHud() {
     lightspeedState.ludicrous &&
     displayLightspeedMultiple >= LUDICROUS_SPEED_MULTIPLIER * 0.95;
 
+  if (isExtensionPackaged() && !navigationActive) return null;
+
   if (displaySpeedKmPerSec < 0.01 && !active && !showCMultiple) return null;
 
   const value =
@@ -36,7 +39,9 @@ export function SpeedHud() {
 
   return (
     <div
-      className="fixed top-5 right-14 z-40 pointer-events-none select-none font-mono text-[10px] text-zinc-600/80 tabular-nums text-right"
+      className={`fixed top-5 z-40 pointer-events-none select-none font-mono text-[10px] text-zinc-600/80 tabular-nums text-right ${
+        isExtensionPackaged() ? "right-5" : "right-14"
+      }`}
       aria-live="polite"
     >
       {showCMultiple ? (

@@ -18,6 +18,29 @@ export function isScreensaverMode(): boolean {
   return value === "1" || value === "true";
 }
 
+/** Packaged Premium explorer running from chrome-extension:// (not planets.ooo). */
+export function isExtensionPackaged(): boolean {
+  if (typeof window === "undefined") return false;
+  return window.location.protocol === "chrome-extension:";
+}
+
+/** Extension screensaver with manual flight still active. */
+export function isExtensionScreensaverFlight(navigationActive: boolean): boolean {
+  return isExtensionPackaged() && isScreensaverMode() && navigationActive;
+}
+
+/** Multiplayer requested via ?multiplayer=1 on web or extension when online. */
+export function isMultiplayerMode(): boolean {
+  if (typeof window === "undefined") return false;
+  const value = new URLSearchParams(window.location.search).get("multiplayer");
+  return value === "1" || value === "true";
+}
+
+/** Full explorer UI (HUD, menu, panels) — web app, or packaged Premium extension. */
+export function showExplorerChrome(): boolean {
+  return !isScreensaverMode() || isExtensionPackaged();
+}
+
 /** Parse ?screensaver=1 URL params (extension appends flightKey / exitKey). */
 export function readScreensaverConfig(): ScreensaverConfig {
   if (typeof window === "undefined") {
@@ -55,4 +78,3 @@ export const SCREENSAVER_FLIGHT_KEY_OPTIONS = [
   { code: "Digit9", label: "9" },
   { code: "F12", label: "F12" },
 ] as const;
-

@@ -26,7 +26,8 @@ import {
 } from "@/lib/discoveryAutopilot";
 import { resetRouteTourState } from "@/lib/routeTour";
 import { FLIGHT_RETICLE_IDLE_MS, SCENIC_CHROME_IDLE_MS } from "@/lib/scenicChrome";
-import { isScreensaverMode } from "@/lib/screensaverConfig";
+import { flightReticleState } from "@/lib/flightReticleState";
+import { isExtensionPackaged, isScreensaverMode, isMultiplayerMode } from "@/lib/screensaverConfig";
 import { activateScreensaverScenicTour } from "@/lib/screensaverScenic";
 
 interface ExplorerState {
@@ -83,6 +84,8 @@ interface ExplorerContextValue extends ExplorerState {
   endAutopilotTransit: () => void;
   /** Exit route autopilot at current position and view (WASD during trip). */
   interruptRouteNavigation: () => void;
+  /** Cancel label transit in extension flight; stay in manual flight. */
+  interruptExtensionFlightTransit: () => void;
   setDiscoveryAutopilotActive: (active: boolean) => void;
   markScenicChromeActivity: () => void;
   markFlightReticleActivity: () => void;
@@ -482,8 +485,22 @@ export function ExplorerProvider({ children }: { children: ReactNode }) {
     markIdleOrbitUserActivity();
   }, [clearAutoNavigation]);
 
+  const interruptExtensionFlightTransit = useCallback(() => {
+    discoveryAutopilotState.searchFocusLocked = false;
+    resetDiscoveryLegLock();
+    resetDiscoveryAutopilotState();
+    setDiscoveryAutopilotActiveState(false);
+    setDisplayLightspeedMultiple(0);
+    endAutopilotTransit();
+    setNavTargetId(null);
+    markIdleOrbitUserActivity();
+  }, [endAutopilotTransit]);
+
   const navigateToTarget = useCallback(
     (id: NavTargetId) => {
+      const wasExtensionFlight =
+        isExtensionPackaged() && navigationActiveRef.current;
+
       cancelRoute();
       setMenuOpen(false);
       markIdleOrbitUserActivity();
@@ -497,6 +514,21 @@ export function ExplorerProvider({ children }: { children: ReactNode }) {
         setNavTargetId(id);
       }
       if (isPlanetTarget(id)) setSelectedId(id);
+
+      if (typeof window !== "undefined" && isMultiplayerMode()) {
+        void fetch("/api/multiplayer/progression/discovery", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ focusId: id }),
+        });
+      }
+
+      if (wasExtensionFlight) {
+        if (document.pointerLockElement) {
+          document.exitPointerLock();
+        }
+        window.dispatchEvent(new CustomEvent("orbit-extension-flight-navigate"));
+      }
     },
     [
       cancelRoute,
@@ -510,6 +542,10 @@ export function ExplorerProvider({ children }: { children: ReactNode }) {
   const selectReticleTarget = useCallback(
     (id: NavTargetId) => {
       markIdleOrbitUserActivity();
+      if (isExtensionPackaged() || flightReticleState.viaLabel) {
+        navigateToTarget(id);
+        return;
+      }
       if (id === "moon") {
         navigateToTarget(id);
         return;
@@ -560,6 +596,7 @@ export function ExplorerProvider({ children }: { children: ReactNode }) {
       clearAutoNavigation,
       endAutopilotTransit,
       interruptRouteNavigation,
+      interruptExtensionFlightTransit,
       setDiscoveryAutopilotActive,
       markScenicChromeActivity,
       markFlightReticleActivity,
@@ -620,6 +657,7 @@ export function ExplorerProvider({ children }: { children: ReactNode }) {
       clearAutoNavigation,
       endAutopilotTransit,
       interruptRouteNavigation,
+      interruptExtensionFlightTransit,
       setDiscoveryAutopilotActive,
       markScenicChromeActivity,
       markFlightReticleActivity,

@@ -5,11 +5,11 @@ Chrome screensaver extension for the PlanetsOOO scenic tour.
 ## What It Does
 
 - Uses `chrome.idle` to detect inactivity.
-- **Basic:** opens the PlanetsOOO scenic tour (`?screensaver=1&flight=0`) on the selected display (requires internet).
-- **Premium:** opens the packaged React explorer (`screensaver-react.html`) with offline flight mode.
+- **Basic:** opens the PlanetsOOO scenic tour (`?screensaver=1&flight=0`) when planets.ooo is reachable; otherwise falls back to packaged `screensaver.html`.
+- **Premium:** opens planets.ooo with flight when reachable; otherwise falls back to packaged `screensaver-react.html` offline flight.
 - Requests window fullscreen with `chrome.windows.update(windowId, { state: "fullscreen" })`.
-- Basic mode uses the hosted scenic tour on planets.ooo (online only).
-- Premium mode uses the packaged React explorer with flight controls (offline).
+- Basic mode prefers the hosted scenic tour on planets.ooo and falls back to packaged offline scenic mode when unreachable.
+- Premium mode prefers hosted flight on planets.ooo and falls back to packaged offline React flight when unreachable.
 - In PlanetsOOO mode, any input closes before flight except the configured
   flight key. After flight starts, the configured exit key closes the tab.
 - Flight mode input is treated as intentional control input, not activity that
@@ -49,9 +49,7 @@ Chrome's fullscreen notice, including the Esc hint, is browser-owned UI and
 cannot be hidden by an extension. The extension avoids unnecessary repeat
 fullscreen requests so that notice is shown as little as Chrome allows.
 
-Basic opens `https://www.planets.ooo/?screensaver=1` when idle. Premium opens
-the bundled `screensaver-react.html` explorer. There is no reachability probe
-or Basic offline fallback — Basic requires planets.ooo to be reachable.
+Basic and Premium both probe planets.ooo first. Offline packaged pages request an online upgrade when connectivity returns.
 
 Regenerate the offline bundle after editing `offline-app/main.tsx` or
 `offline-tour/main.js`:

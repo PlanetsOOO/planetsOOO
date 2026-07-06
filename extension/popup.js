@@ -22,10 +22,18 @@ const flightKeyEl = document.getElementById("flightKey");
 const exitKeyEl = document.getElementById("exitKey");
 const closeOnActiveEl = document.getElementById("closeOnActive");
 const premiumLinkEl = document.getElementById("premiumLink");
+const accountLinkEl = document.getElementById("accountLink");
+const extensionLinkEl = document.getElementById("extensionLink");
+const multiplayerLinkEl = document.getElementById("multiplayerLink");
 const saveBtn = document.getElementById("save");
 const previewBtn = document.getElementById("preview");
 const closeBtn = document.getElementById("close");
+const legalYearEl = document.getElementById("legalYear");
 let currentPlan = DEFAULTS.plan;
+
+if (legalYearEl) {
+  legalYearEl.textContent = String(new Date().getFullYear());
+}
 
 async function getInstallId() {
   const stored = await chrome.storage.local.get({ premiumInstallId: "" });
@@ -42,6 +50,24 @@ async function updatePremiumLink() {
   url.searchParams.set("extensionId", chrome.runtime.id);
   url.searchParams.set("installId", installId);
   premiumLinkEl.href = url.toString();
+}
+
+async function updateAccountLinks() {
+  const installId = await getInstallId();
+  if (accountLinkEl) {
+    accountLinkEl.href = new URL("/account", DEFAULTS.siteUrl).toString();
+  }
+  if (extensionLinkEl) {
+    const url = new URL("/auth/extension", DEFAULTS.siteUrl);
+    url.searchParams.set("extensionId", chrome.runtime.id);
+    url.searchParams.set("installId", installId);
+    extensionLinkEl.href = url.toString();
+  }
+  if (multiplayerLinkEl) {
+    const url = new URL("/", DEFAULTS.siteUrl);
+    url.searchParams.set("multiplayer", "1");
+    multiplayerLinkEl.href = url.toString();
+  }
 }
 
 function formatIdleLabel(minutes) {
@@ -222,3 +248,4 @@ premiumLinkEl?.addEventListener("click", async (event) => {
 
 void loadSettings();
 void updatePremiumLink();
+void updateAccountLinks();

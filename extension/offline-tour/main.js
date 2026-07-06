@@ -769,6 +769,15 @@ function notifyReady() {
   void chrome.runtime.sendMessage({ type: "screensaver-page-ready" });
 }
 
+function requestOnlineUpgradeWhenReachable() {
+  const requestUpgrade = () => {
+    void chrome.runtime.sendMessage({ type: "upgrade-offline-screensaver" });
+  };
+
+  requestUpgrade();
+  window.addEventListener("online", requestUpgrade);
+}
+
 function meaningfulPointerMove(event) {
   return (
     Math.abs(event.movementX || 0) + Math.abs(event.movementY || 0) >=
@@ -953,4 +962,5 @@ camera.position.set(
 );
 bindInput();
 notifyReady();
+requestOnlineUpgradeWhenReachable();
 animate();

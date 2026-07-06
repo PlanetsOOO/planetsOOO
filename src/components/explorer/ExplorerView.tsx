@@ -56,7 +56,8 @@ function GlobalShortcuts() {
         !e.metaKey &&
         !e.ctrlKey &&
         !e.altKey &&
-        !isEditableTarget(e.target)
+        !isEditableTarget(e.target) &&
+        navigationActive
       ) {
         e.preventDefault();
         setShowLabels(!showLabels);
@@ -68,7 +69,8 @@ function GlobalShortcuts() {
         !e.metaKey &&
         !e.ctrlKey &&
         !e.altKey &&
-        !isEditableTarget(e.target)
+        !isEditableTarget(e.target) &&
+        navigationActive
       ) {
         if (websiteFlight) return;
         e.preventDefault();

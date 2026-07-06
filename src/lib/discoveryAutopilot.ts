@@ -446,6 +446,28 @@ export function pickRandomNavTarget(exclude?: NavTargetId | null): NavTargetId {
   return pool[Math.floor(Math.random() * pool.length)].id;
 }
 
+/** Nearest searchable body to the viewer (for extension flight idle return). */
+export function pickClosestNavTarget(
+  from = viewerPosition,
+  exclude?: NavTargetId | null,
+): NavTargetId {
+  let bestId: NavTargetId = NAV_TARGETS[0]?.id ?? "earth";
+  let bestDistSq = Infinity;
+
+  for (const target of NAV_TARGETS) {
+    if (exclude && target.id === exclude) continue;
+    const bodyPos = getTargetPosition(target.id);
+    if (!bodyPos) continue;
+    const distSq = from.distanceToSquared(bodyPos);
+    if (distSq < bestDistSq) {
+      bestDistSq = distSq;
+      bestId = target.id;
+    }
+  }
+
+  return bestId;
+}
+
 export function queueNextDiscoveryTarget(): NavTargetId {
   if (discoveryAutopilotState.searchFocusLocked) {
     return discoveryAutopilotState.currentTargetId ?? NAV_TARGETS[0].id;

@@ -7,11 +7,13 @@ import type { NavTargetId } from "@/data/navigationTargets";
 import { useExplorer } from "@/context/ExplorerContext";
 import { directionFromAngles } from "@/lib/navigation";
 import { flightReticleState } from "@/lib/flightReticleState";
+import { pickBodyLabelAt } from "@/lib/bodyLabelPick";
 import {
   absoluteToCameraSpace,
   navTargetRenderRadius,
 } from "@/lib/coordinates/frame";
 import { RENDER_FRAME_PRIORITY } from "@/lib/renderFramePriority";
+import { isExtensionScreensaverFlight } from "@/lib/screensaverConfig";
 import { getTargetPosition } from "@/lib/targetPositions";
 
 const rayOrigin = new THREE.Vector3();
@@ -48,13 +50,29 @@ export function FlightTargetSelector({
   pitchRef: React.MutableRefObject<number>;
   rollRef: React.MutableRefObject<number>;
 }) {
-  const { navigationActive, autoNavigating } = useExplorer();
+  const { navigationActive, autoNavigating, showLabels } = useExplorer();
 
-  useFrame(() => {
-    if (!navigationActive || autoNavigating) {
+  useFrame((state) => {
+    const extensionFlight = isExtensionScreensaverFlight(navigationActive);
+    if (!navigationActive || (autoNavigating && !extensionFlight)) {
       flightReticleState.targetId = null;
+      flightReticleState.viaLabel = false;
       return;
     }
+
+    if (showLabels) {
+      const labelId = pickBodyLabelAt(
+        state.size.width * 0.5,
+        state.size.height * 0.5,
+      );
+      if (labelId) {
+        flightReticleState.targetId = labelId;
+        flightReticleState.viaLabel = true;
+        return;
+      }
+    }
+
+    flightReticleState.viaLabel = false;
 
     directionFromAngles(
       yawRef.current,

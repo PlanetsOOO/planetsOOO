@@ -5,10 +5,12 @@ import type { NavTargetId } from "@/data/navigationTargets";
 import { useExplorer } from "@/context/ExplorerContext";
 import { discoveryAutopilotState } from "@/lib/discoveryAutopilot";
 import { idleOrbitState } from "@/lib/idleOrbitState";
-import { readScreensaverConfig } from "@/lib/screensaverConfig";
+import { pickClosestNavTarget } from "@/lib/discoveryAutopilot";
+import { readScreensaverConfig, isExtensionPackaged } from "@/lib/screensaverConfig";
 import { activateScreensaverPresentation } from "@/lib/screensaverPresentation";
 import { activateScreensaverScenicTour } from "@/lib/screensaverScenic";
 import { useScreensaverMode } from "@/hooks/useScreensaverMode";
+import { viewerPosition } from "@/lib/viewerState";
 
 const FLIGHT_IDLE_RETURN_MS = 15_000;
 const FLIGHT_IDLE_MOUSE_EPSILON = 2;
@@ -65,6 +67,8 @@ export function ScreensaverBootstrap() {
     returnToDiscoveryScenic,
     showLabels,
     setShowLabels,
+    showOrbits,
+    setShowOrbits,
     displaySpeedKmPerSec,
     displayLightspeedMultiple,
     speedUnit,
@@ -73,8 +77,9 @@ export function ScreensaverBootstrap() {
   const flightActiveRef = useRef(false);
   const returnTargetRef = useRef<NavTargetId | null>(null);
   const showLabelsRef = useRef(showLabels);
+  const showOrbitsRef = useRef(showOrbits);
   const flightIdleTimerRef = useRef<number | null>(null);
-  const ignoreLabelKeyupRef = useRef(false);
+  const ignoreToggleKeyupRef = useRef(false);
   const displaySpeedKmPerSecRef = useRef(displaySpeedKmPerSec);
   const displayLightspeedMultipleRef = useRef(displayLightspeedMultiple);
   const speedUnitRef = useRef(speedUnit);
@@ -82,6 +87,10 @@ export function ScreensaverBootstrap() {
   useEffect(() => {
     showLabelsRef.current = showLabels;
   }, [showLabels]);
+
+  useEffect(() => {
+    showOrbitsRef.current = showOrbits;
+  }, [showOrbits]);
 
   useEffect(() => {
     if (!screensaver) return;
@@ -150,11 +159,15 @@ export function ScreensaverBootstrap() {
       setNavigationActive(false);
       showLabelsRef.current = false;
       setShowLabels(false);
+      showOrbitsRef.current = false;
+      setShowOrbits(false);
       if (document.pointerLockElement) {
         document.exitPointerLock();
       }
 
-      const returnTarget = returnTargetRef.current;
+      const returnTarget = isExtensionPackaged()
+        ? pickClosestNavTarget(viewerPosition)
+        : returnTargetRef.current;
       returnToDiscoveryScenic(returnTarget);
     };
 
@@ -171,6 +184,12 @@ export function ScreensaverBootstrap() {
       const next = !showLabelsRef.current;
       showLabelsRef.current = next;
       setShowLabels(next);
+    };
+
+    const toggleOrbits = () => {
+      const next = !showOrbitsRef.current;
+      showOrbitsRef.current = next;
+      setShowOrbits(next);
     };
 
     const enterFlight = () => {
@@ -238,12 +257,26 @@ export function ScreensaverBootstrap() {
       if (e.key.toLowerCase() === "l" && !modified) {
         e.preventDefault();
         e.stopImmediatePropagation();
-        ignoreLabelKeyupRef.current = true;
+        ignoreToggleKeyupRef.current = true;
         toggleLabels();
         markFlightActivity();
         return;
       }
 
+      if (e.key.toLowerCase() === "o" && !modified) {
+        e.preventDefault();
+        e.stopImmediatePropagation();
+        ignoreToggleKeyupRef.current = true;
+        toggleOrbits();
+        markFlightActivity();
+        return;
+      }
+
+      markFlightActivity();
+    };
+
+    const onExtensionFlightNavigate = () => {
+      clearFlightIdleTimer();
       markFlightActivity();
     };
 
@@ -258,8 +291,8 @@ export function ScreensaverBootstrap() {
     };
 
     const onFlightActivity = () => {
-      if (ignoreLabelKeyupRef.current) {
-        ignoreLabelKeyupRef.current = false;
+      if (ignoreToggleKeyupRef.current) {
+        ignoreToggleKeyupRef.current = false;
         return;
       }
       markFlightActivity();
@@ -293,22 +326,12 @@ export function ScreensaverBootstrap() {
       exitScreensaver();
     };
 
-    let hadScreensaverPointerLock = false;
     const onPointerLockChange = () => {
-      if (!flightEnteredRef.current) {
-        hadScreensaverPointerLock = false;
-        return;
-      }
+      if (!flightEnteredRef.current) return;
 
       const canvas = document.querySelector("canvas");
       if (document.pointerLockElement === canvas) {
-        hadScreensaverPointerLock = true;
         markFlightActivity();
-        return;
-      }
-
-      if (hadScreensaverPointerLock) {
-        returnToScenicTour();
       }
     };
 
@@ -321,6 +344,10 @@ export function ScreensaverBootstrap() {
     window.addEventListener("mousemove", onFlightMouseMove, true);
     window.addEventListener("wheel", onFlightWheel, true);
     document.addEventListener("pointerlockchange", onPointerLockChange);
+    window.addEventListener(
+      "orbit-extension-flight-navigate",
+      onExtensionFlightNavigate,
+    );
 
     return () => {
       clearFlightIdleTimer();
@@ -333,6 +360,10 @@ export function ScreensaverBootstrap() {
       window.removeEventListener("mousemove", onFlightMouseMove, true);
       window.removeEventListener("wheel", onFlightWheel, true);
       document.removeEventListener("pointerlockchange", onPointerLockChange);
+      window.removeEventListener(
+        "orbit-extension-flight-navigate",
+        onExtensionFlightNavigate,
+      );
     };
   }, [
     screensaver,
@@ -342,6 +373,7 @@ export function ScreensaverBootstrap() {
     setDiscoveryAutopilotActive,
     setNavigationActive,
     setShowLabels,
+    setShowOrbits,
     returnToDiscoveryScenic,
     startScenicTour,
   ]);

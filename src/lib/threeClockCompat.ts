@@ -1,70 +1,41 @@
 import * as THREE from "three";
+import { OrbitClock } from "./orbitClock";
+
+const MARKER = "__orbitClockCompat";
+
+function clockAlreadyPatched(): boolean {
+  return Boolean(
+    (THREE.Clock as unknown as Record<string, boolean | undefined>)[MARKER],
+  );
+}
+
+function canAssignThreeClock(): boolean {
+  const desc = Object.getOwnPropertyDescriptor(
+    THREE as unknown as object,
+    "Clock",
+  );
+  if (!desc) return true;
+  return Boolean(desc.writable || desc.set);
+}
 
 /**
  * R3F v9 still constructs THREE.Clock, which logs a deprecation warning in
  * three.js r183+. Use a drop-in replacement until we adopt R3F v10.
+ *
+ * In the packaged extension, `three` is aliased to `threeExtensionShim` at
+ * build time so this patch is not needed (and would throw on a read-only export).
  */
 export function installThreeClockCompat(): void {
   if (typeof window === "undefined") return;
+  if (clockAlreadyPatched()) return;
+  if (!canAssignThreeClock()) return;
 
-  const marker = "__orbitClockCompat";
-  if ((THREE.Clock as unknown as Record<string, boolean>)[marker]) {
-    return;
-  }
+  (OrbitClock as unknown as Record<string, boolean>)[MARKER] = true;
 
-  class OrbitClock {
-    autoStart: boolean;
-    startTime = 0;
-    oldTime = 0;
-    elapsedTime = 0;
-    running = false;
-
-    constructor(autoStart = true) {
-      this.autoStart = autoStart;
-    }
-
-    start(): void {
-      this.startTime = performance.now();
-      this.oldTime = this.startTime;
-      this.elapsedTime = 0;
-      this.running = true;
-    }
-
-    stop(): void {
-      this.getElapsedTime();
-      this.running = false;
-      this.autoStart = false;
-    }
-
-    getElapsedTime(): number {
-      this.getDelta();
-      return this.elapsedTime;
-    }
-
-    getDelta(): number {
-      let diff = 0;
-
-      if (this.autoStart && !this.running) {
-        this.start();
-        return 0;
-      }
-
-      if (this.running) {
-        const newTime = performance.now();
-        diff = (newTime - this.oldTime) / 1000;
-        this.oldTime = newTime;
-        this.elapsedTime += diff;
-      }
-
-      return diff;
-    }
-  }
-
-  (OrbitClock as unknown as Record<string, boolean>)[marker] = true;
   try {
     const threeNamespace = THREE as unknown as Record<string, unknown>;
     threeNamespace.Clock = OrbitClock;
   } catch {
-    // three namespace can be read-only during SSR module evaluation.
+    // Namespace can be read-only in some bundlers.
   }
 }

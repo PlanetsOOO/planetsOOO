@@ -422,7 +422,7 @@ export function PlanetMesh({ config }: PlanetMeshProps) {
           name={config.name}
           bodyRadius={config.radius}
           bodyCenterRef={visualScaleRef}
-          highlighted={isHighlighted}
+          highlighted={isNavTarget || isReticleTarget}
         />
       )}
       </group>

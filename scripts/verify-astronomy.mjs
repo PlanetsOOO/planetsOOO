@@ -8,6 +8,23 @@ const C_UNITS_PER_S = C_KM_S / KM_PER_UNIT;
 const AU_UNITS = AU_KM / KM_PER_UNIT;
 const AU_LIGHT_SECONDS = AU_KM / C_KM_S;
 const MOON_SIDEREAL_PERIOD_DAYS = 27.321661;
+const J2000 = 2_451_545.0;
+const DAYS_PER_JULIAN_CENTURY = 36_525;
+
+function julianDateMs(ms) {
+  return ms / 86_400_000 + 2_440_587.5;
+}
+
+function moonMeanAnomalyDeg(ms) {
+  const T = (julianDateMs(ms) - J2000) / DAYS_PER_JULIAN_CENTURY;
+  return ((134.9633964 + 477198.8675055 * T) % 360 + 360) % 360;
+}
+
+function angularSeparationDeg(a, b) {
+  let delta = Math.abs(a - b) % 360;
+  if (delta > 180) delta = 360 - delta;
+  return delta;
+}
 
 function lightTimeFromUnits(distanceUnits) {
   return (distanceUnits * KM_PER_UNIT) / C_KM_S;
@@ -62,6 +79,19 @@ console.log(
 );
 console.log(`Reference AU light time: ${AU_LIGHT_SECONDS.toFixed(1)} s (~8m 19s)`);
 console.log(`Moon sidereal period: ${MOON_SIDEREAL_PERIOD_DAYS} days`);
+
+const moonEpoch = Date.UTC(2026, 0, 1, 12, 0, 0);
+const moonLater =
+  moonEpoch + MOON_SIDEREAL_PERIOD_DAYS * 86_400_000;
+const moonDrift = angularSeparationDeg(
+  moonMeanAnomalyDeg(moonEpoch),
+  moonMeanAnomalyDeg(moonLater),
+);
+const moonPeriodOk = moonDrift < 8;
+if (!moonPeriodOk) failed = true;
+console.log(
+  `${moonPeriodOk ? "✓" : "✗"} Moon mean anomaly after 1 sidereal month: ${moonDrift.toFixed(2)}° from start (expected ~0°)`,
+);
 
 if (failed) {
   console.error("\nSome checks failed.");

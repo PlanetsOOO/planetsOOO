@@ -19,7 +19,7 @@ export const viewport: Viewport = {
 };
 
 export const metadata: Metadata = {
-  title: "Orbit — Solar System Explorer",
+  title: "Planets | Orbit Explorer",
   description:
     "An advanced hobbyist 3D solar system explorer powered by NASA-derived planetary imagery, Three.js, and Next.js.",
   icons: {

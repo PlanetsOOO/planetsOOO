@@ -1,6 +1,7 @@
 import { copyFile, mkdir } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { execFileSync } from "node:child_process";
 import { build } from "esbuild";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -86,10 +87,27 @@ await build({
 });
 
 // Premium React/R3F explorer: shared online scene, packaged for MV3 offline use.
+execFileSync(
+  "npx",
+  [
+    "@tailwindcss/cli",
+    "-i",
+    path.join(extensionDir, "offline-app", "explorer.css"),
+    "-o",
+    path.join(extensionDir, "screensaver-react.css"),
+    "--minify",
+  ],
+  { cwd: root, stdio: "inherit" },
+);
+
 await build({
   ...sharedBuildOptions,
   entryPoints: [path.join(extensionDir, "offline-app", "main.tsx")],
   outfile: path.join(extensionDir, "screensaver-react.js"),
+  alias: {
+    ...sharedBuildOptions.alias,
+    three: path.join(srcDir, "lib/threeExtensionShim.ts"),
+  },
   define: {
     "process.env.NODE_ENV": "\"production\"",
   },

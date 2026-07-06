@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useScreensaverMode } from "@/hooks/useScreensaverMode";
+import { isExtensionPackaged } from "@/lib/screensaverConfig";
 
 export function ScreensaverBootOverlay() {
   const screensaver = useScreensaverMode();
@@ -27,7 +28,9 @@ export function ScreensaverBootOverlay() {
       if (ticks === 4) setMessage("Loading 3D view…");
       if (ticks === 20) {
         setMessage(
-          "Still loading — confirm npm run dev is running and the site URL port matches.",
+          isExtensionPackaged()
+            ? "Still loading — check extension textures in chrome://extensions."
+            : "Still loading — confirm planets.ooo is reachable and reload.",
         );
       }
     }, 500);

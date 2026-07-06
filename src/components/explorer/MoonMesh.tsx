@@ -180,7 +180,7 @@ export function MoonMesh() {
             name="Moon"
             bodyRadius={MOON.radius}
             bodyCenterRef={visualScaleRef}
-            highlighted={isHighlighted}
+            highlighted={isNavTarget || isReticleTarget}
           />
         )}
       </group>

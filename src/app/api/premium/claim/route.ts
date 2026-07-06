@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import Stripe from "stripe";
 import { signPremiumEntitlement } from "@/lib/premium/entitlement";
+import { registerPremiumPurchase } from "@/lib/entitlements/store";
+import { getWebSession } from "@/lib/multiplayer/access";
 
 export const runtime = "nodejs";
 
@@ -87,6 +89,15 @@ export async function POST(request: Request) {
     },
     entitlementSecret,
   );
+
+  const webSession = await getWebSession();
+  await registerPremiumPurchase({
+    stripeSessionId: session.id,
+    extensionId,
+    installId,
+    userId: webSession?.userId,
+    issuedAt: Date.now(),
+  });
 
   return NextResponse.json({ entitlement, extensionId, installId });
 }

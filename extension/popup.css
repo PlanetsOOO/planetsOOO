@@ -181,3 +181,33 @@ button.secondary {
 button:hover {
   border-color: #71717a;
 }
+
+.legal-footer {
+  margin-top: 0.75rem;
+  padding-top: 0.65rem;
+  border-top: 1px solid #18181b;
+  text-align: center;
+  font-size: 0.65rem;
+  line-height: 1.45;
+  color: #52525b;
+}
+
+.legal-copy {
+  text-transform: none;
+  letter-spacing: normal;
+}
+
+.legal-sep {
+  margin: 0 0.35rem;
+  color: #3f3f46;
+}
+
+.legal-footer a {
+  color: #71717a;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.legal-footer a:hover {
+  color: #a1a1aa;
+}

@@ -25,6 +25,7 @@ const FULLSCREEN_CHECK_DELAY_MS = 3200;
 const FULLSCREEN_RECOVERY_DELAY_MS = 450;
 const FULLSCREEN_REQUEST_COOLDOWN_MS = 2500;
 const SCREENSAVER_OPEN_GRACE_MS = 4_000;
+const ONLINE_PROBE_TIMEOUT_MS = 2500;
 const OFFLINE_SCREENSAVER_PAGE = "screensaver.html";
 const PREMIUM_OFFLINE_SCREENSAVER_PAGE = "screensaver-premium.html";
 const REACT_OFFLINE_SCREENSAVER_PAGE = "screensaver-react.html";
@@ -222,6 +223,10 @@ function tabsRemove(tabId) {
 
 function tabsQuery(queryInfo) {
   return promisifyChrome(chrome.tabs.query, queryInfo);
+}
+
+function tabsUpdate(tabId, options) {
+  return promisifyChrome(chrome.tabs.update, tabId, options);
 }
 
 function displaysGetInfo() {
@@ -489,7 +494,7 @@ function buildPlanetsUrl(settings) {
     const base = settings.siteUrl?.trim() || DEFAULTS.siteUrl;
     const url = new URL(base.includes("://") ? base : `https://${base}`);
     url.searchParams.set("screensaver", "1");
-    url.searchParams.set("flight", "0");
+    url.searchParams.set("flight", isPremiumPlan(settings) ? "1" : "0");
     url.searchParams.set("flightKey", settings.flightKey || DEFAULTS.flightKey);
     url.searchParams.set("exitKey", settings.exitKey || settings.flightKey || DEFAULTS.exitKey);
     return url.toString();
@@ -503,6 +508,16 @@ function buildPlanetsUrl(settings) {
   }
 }
 
+function buildBasicOfflineScreensaverUrl(settings) {
+  const url = new URL(chrome.runtime.getURL(OFFLINE_SCREENSAVER_PAGE));
+  url.searchParams.set("screensaver", "1");
+  url.searchParams.set("offline", "1");
+  url.searchParams.set("flight", "0");
+  url.searchParams.set("flightKey", settings.flightKey || DEFAULTS.flightKey);
+  url.searchParams.set("exitKey", settings.exitKey || settings.flightKey || DEFAULTS.exitKey);
+  return url.toString();
+}
+
 function buildPremiumScreensaverUrl(settings) {
   const url = new URL(chrome.runtime.getURL(REACT_OFFLINE_SCREENSAVER_PAGE));
   url.searchParams.set("screensaver", "1");
@@ -513,24 +528,91 @@ function buildPremiumScreensaverUrl(settings) {
   return url.toString();
 }
 
-function getScreensaverUrl(settings) {
+function isPackagedOfflineScreensaverUrl(url) {
+  if (!url) return false;
+  try {
+    const parsed = new URL(url);
+    const extensionOrigin = new URL(chrome.runtime.getURL("")).origin;
+    if (parsed.origin !== extensionOrigin) return false;
+    return (
+      parsed.pathname.endsWith(`/${OFFLINE_SCREENSAVER_PAGE}`) ||
+      parsed.pathname.endsWith(`/${PREMIUM_OFFLINE_SCREENSAVER_PAGE}`) ||
+      parsed.pathname.endsWith(`/${REACT_OFFLINE_SCREENSAVER_PAGE}`)
+    );
+  } catch {
+    return false;
+  }
+}
+
+async function onlineScreensaverReachable(url) {
+  const headController = new AbortController();
+  const headTimeout = setTimeout(
+    () => headController.abort(),
+    ONLINE_PROBE_TIMEOUT_MS,
+  );
+
+  try {
+    const res = await fetch(url, {
+      method: "HEAD",
+      cache: "no-store",
+      signal: headController.signal,
+    });
+    if (res.ok) return true;
+  } catch {
+    // Some hosts reject HEAD — fall back to GET below.
+  } finally {
+    clearTimeout(headTimeout);
+  }
+
+  const getController = new AbortController();
+  const getTimeout = setTimeout(
+    () => getController.abort(),
+    ONLINE_PROBE_TIMEOUT_MS,
+  );
+
+  try {
+    const res = await fetch(url, {
+      method: "GET",
+      cache: "no-store",
+      signal: getController.signal,
+    });
+    return res.ok;
+  } catch {
+    return false;
+  } finally {
+    clearTimeout(getTimeout);
+  }
+}
+
+async function getScreensaverUrl(settings) {
+  const onlineUrl = buildPlanetsUrl(settings);
+  if (await onlineScreensaverReachable(onlineUrl)) {
+    return {
+      url: onlineUrl,
+      source: "planets",
+      offline: false,
+      onlineUrl,
+      warning: null,
+    };
+  }
+
   if (isPremiumPlan(settings)) {
     return {
       url: buildPremiumScreensaverUrl(settings),
       source: "packaged-react",
       offline: true,
-      onlineUrl: null,
-      warning: null,
+      onlineUrl,
+      warning:
+        "PlanetsOOO is unavailable; using packaged offline Premium flight.",
     };
   }
 
-  const onlineUrl = buildPlanetsUrl(settings);
   return {
-    url: onlineUrl,
-    source: "planets",
-    offline: false,
+    url: buildBasicOfflineScreensaverUrl(settings),
+    source: "packaged-basic-offline",
+    offline: true,
     onlineUrl,
-    warning: null,
+    warning: "PlanetsOOO is unavailable; using packaged offline scenic mode.",
   };
 }
 
@@ -604,7 +686,7 @@ async function launchScreensaver({ preview = false } = {}) {
     return result;
   }
 
-  const screensaverUrl = getScreensaverUrl(settings);
+  const screensaverUrl = await getScreensaverUrl(settings);
 
   if (await focusExistingScreensaver(settings)) {
     const result = {
@@ -746,9 +828,49 @@ async function closeScreensaver(fallback = {}) {
   return { ok: true };
 }
 
-async function upgradeOfflineScreensaver() {
-  // Basic always uses planets.ooo; Premium always uses packaged React — no upgrade path.
-  return { ok: true, upgraded: false };
+async function upgradeOfflineScreensaver(tabId) {
+  if (tabId == null) {
+    return { ok: false, upgraded: false, error: "No active offline screensaver tab." };
+  }
+
+  if (!isScreensaverTabId(tabId)) {
+    const tab = await tabsGet(tabId).catch(() => null);
+    if (tab?.windowId != null && isScreensaverUrl(tab.url)) {
+      setScreensaverInstances([
+        ...screensaverInstances,
+        {
+          tabId,
+          windowId: tab.windowId,
+          displayId: `registered-${tab.windowId}`,
+          displayName: "Registered screensaver",
+        },
+      ]);
+    }
+  }
+
+  if (!isScreensaverTabId(tabId)) {
+    return { ok: false, upgraded: false, error: "No active offline screensaver tab." };
+  }
+
+  const tab = await tabsGet(tabId).catch(() => null);
+  if (!tab?.url || !isPackagedOfflineScreensaverUrl(tab.url)) {
+    return { ok: true, upgraded: false };
+  }
+
+  const settings = await getSettings();
+  const onlineUrl = buildPlanetsUrl(settings);
+  if (!(await onlineScreensaverReachable(onlineUrl))) {
+    return { ok: true, upgraded: false };
+  }
+
+  await tabsUpdate(tabId, { url: onlineUrl, active: true });
+  await saveDebug({
+    ok: true,
+    upgraded: true,
+    source: "planets",
+    url: onlineUrl,
+  });
+  return { ok: true, upgraded: true, url: onlineUrl };
 }
 
 chrome.idle.onStateChanged.addListener((state) => {
@@ -950,11 +1072,11 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   }
 
   if (message.type === "upgrade-offline-screensaver") {
-    if (!isTrustedScreensaverTab(sender)) {
+    if (!isTrustedScreensaverSender(sender)) {
       sendMessageResponse(sendResponse, { ok: false, error: "Untrusted sender." });
       return false;
     }
-    upgradeOfflineScreensaver().then((result) =>
+    upgradeOfflineScreensaver(sender?.tab?.id).then((result) =>
       sendMessageResponse(sendResponse, result),
     );
     return true;
@@ -992,11 +1114,34 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 });
 
 chrome.runtime.onMessageExternal.addListener((message, sender, sendResponse) => {
-  if (message?.type !== "premium-entitlement") return false;
   if (!allowedPremiumSender(sender.url)) {
     sendResponse({ ok: false, error: "Sender not allowed." });
     return false;
   }
+
+  if (message?.type === "extension-auth") {
+    if (
+      typeof message.extensionSession !== "string" ||
+      message.extensionSession.length === 0 ||
+      message.extensionSession.length > 16_384
+    ) {
+      sendResponse({ ok: false, error: "Invalid extension session." });
+      return false;
+    }
+
+    chrome.storage.local
+      .set({ orbitExtensionSession: message.extensionSession })
+      .then(() => sendResponse({ ok: true }))
+      .catch((err) => {
+        sendResponse({
+          ok: false,
+          error: err instanceof Error ? err.message : "Unable to save session.",
+        });
+      });
+    return true;
+  }
+
+  if (message?.type !== "premium-entitlement") return false;
   if (
     typeof message.entitlement !== "string" ||
     message.entitlement.length === 0 ||

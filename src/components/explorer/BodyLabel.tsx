@@ -2,12 +2,18 @@
 
 import { Html } from "@react-three/drei";
 import { useFrame } from "@react-three/fiber";
-import { useEffect, useMemo, useRef } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import * as THREE from "three";
 import type { NavTargetId } from "@/data/navigationTargets";
 import { useExplorer } from "@/context/ExplorerContext";
 import { RENDER_FRAME_PRIORITY } from "@/lib/renderFramePriority";
 import { isLabelOccluded } from "@/lib/labelOcclusion";
+import {
+  removeBodyLabelPick,
+  syncBodyLabelPick,
+} from "@/lib/bodyLabelPick";
+import { flightReticleState } from "@/lib/flightReticleState";
+import { isExtensionPackaged } from "@/lib/screensaverConfig";
 
 const VIEW_MARGIN = 0.02;
 const LABEL_OVERLAP_PADDING_PX = 3;
@@ -185,11 +191,19 @@ export function BodyLabel({
 }: BodyLabelProps) {
   const labelRef = useRef<THREE.Group>(null);
   const htmlRootRef = useRef<HTMLDivElement>(null);
-  const { navigateToTarget } = useExplorer();
+  const buttonRef = useRef<HTMLButtonElement>(null);
+  const [mouseHover, setMouseHover] = useState(false);
+  const { navigateToTarget, navigationActive, showLabels } = useExplorer();
   const localOffset = useMemo(
     () => sideOffset(navTargetId, bodyRadius),
     [navTargetId, bodyRadius],
   );
+
+  useEffect(() => {
+    const clearHover = () => setMouseHover(false);
+    document.addEventListener("pointerlockchange", clearHover);
+    return () => document.removeEventListener("pointerlockchange", clearHover);
+  }, []);
 
   useEffect(() => {
     const element = htmlRootRef.current;
@@ -202,6 +216,7 @@ export function BodyLabel({
     scheduleLabelLayout();
     return () => {
       labelRecords.delete(navTargetId);
+      removeBodyLabelPick(navTargetId);
       scheduleLabelLayout();
     };
   }, [navTargetId]);
@@ -217,15 +232,44 @@ export function BodyLabel({
     _bodyNdc.copy(_bodyCenter).project(camera);
     labelGroup.getWorldPosition(_labelWorld);
 
+    const extensionFlight =
+      isExtensionPackaged() && navigationActive;
+    const flightLabelMode = navigationActive && showLabels;
     const onScreen =
       bodyInView(_bodyNdc) &&
-      !isLabelOccluded(navTargetId, _labelWorld, camera, size);
+      (flightLabelMode ||
+        extensionFlight ||
+        !isLabelOccluded(navTargetId, _labelWorld, camera, size));
+    const pointerLocked =
+      typeof document !== "undefined" && document.pointerLockElement !== null;
     htmlRoot.style.display = onScreen ? "block" : "none";
-    htmlRoot.style.pointerEvents = onScreen ? "auto" : "none";
+    const labelTravelEnabled = navigationActive && !pointerLocked;
+    htmlRoot.style.pointerEvents =
+      onScreen && labelTravelEnabled ? "auto" : "none";
     const record = labelRecords.get(navTargetId);
     if (record) {
       record.visible = onScreen;
       scheduleLabelLayout();
+    }
+    syncBodyLabelPick(
+      navTargetId,
+      htmlRoot,
+      onScreen && navigationActive && showLabels,
+    );
+
+    const button = buttonRef.current;
+    if (button) {
+      const reticleHover =
+        onScreen &&
+        showLabels &&
+        navigationActive &&
+        pointerLocked &&
+        flightReticleState.targetId === navTargetId &&
+        flightReticleState.viaLabel;
+      const active =
+        highlighted || reticleHover || (mouseHover && !pointerLocked);
+      button.style.color = active ? "#b8cce0" : "#8a9bb0";
+      button.style.opacity = active ? "0.65" : "0.32";
     }
   }, RENDER_FRAME_PRIORITY.overlays);
 
@@ -241,16 +285,16 @@ export function BodyLabel({
           style={{ transition: "transform 120ms ease-out" }}
         >
           <button
+            ref={buttonRef}
             type="button"
+            onMouseEnter={() => setMouseHover(true)}
+            onMouseLeave={() => setMouseHover(false)}
             onClick={(e) => {
+              if (!navigationActive || document.pointerLockElement) return;
               e.stopPropagation();
               navigateToTarget(navTargetId);
             }}
-            className={`font-mono text-[9px] tracking-[0.2em] uppercase whitespace-nowrap border-0 bg-transparent p-0 cursor-pointer ${
-              highlighted
-                ? "text-[#b8cce0] opacity-65"
-                : "text-[#8a9bb0] opacity-32"
-            }`}
+            className="font-mono text-[9px] tracking-[0.2em] uppercase whitespace-nowrap border-0 bg-transparent p-0 cursor-pointer transition-opacity duration-150"
             style={{ textShadow: "0 0 5px rgba(0,0,0,0.5)" }}
           >
             {name}

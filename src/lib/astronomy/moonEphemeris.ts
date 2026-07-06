@@ -6,6 +6,8 @@ import * as THREE from "three";
 
 const DEG = Math.PI / 180;
 const J2000 = 2_451_545.0;
+/** Julian centuries since J2000 — Meeus Ch. 47 time argument. */
+const DAYS_PER_JULIAN_CENTURY = 36_525;
 
 /** Lunar orbital motion vs the shared simulation clock (1 = real-time ephemeris rate). */
 export const MOON_ORBIT_TIME_SCALE = 1;
@@ -61,13 +63,13 @@ export function getGeocentricMoonEclipticKm(
   target = { x: 0, y: 0, z: 0, lonDeg: 0, latRad: 0, distanceKm: 0 },
 ) {
   const jd = julianDate(date);
-  const d = jd - J2000;
+  const T = (jd - J2000) / DAYS_PER_JULIAN_CENTURY;
 
-  const Lp = normalizeDegrees(218.3164477 + 481267.88123421 * d);
-  const D = normalizeDegrees(297.8501921 + 445267.1114034 * d);
-  const M = normalizeDegrees(357.5291092 + 35999.0502909 * d);
-  const Mp = normalizeDegrees(134.9633964 + 477198.8675055 * d);
-  const F = normalizeDegrees(93.272095 + 483202.0175233 * d);
+  const Lp = normalizeDegrees(218.3164477 + 481267.88123421 * T);
+  const D = normalizeDegrees(297.8501921 + 445267.1114034 * T);
+  const M = normalizeDegrees(357.5291092 + 35999.0502909 * T);
+  const Mp = normalizeDegrees(134.9633964 + 477198.8675055 * T);
+  const F = normalizeDegrees(93.272095 + 483202.0175233 * T);
 
   const LpR = Lp * DEG;
   const DR = D * DEG;
@@ -130,6 +132,24 @@ export function getGeocentricMoonEclipticKm(
   return target;
 }
 
+function geocentricKmFromLonLat(
+  lonDeg: number,
+  latRad: number,
+  distanceKm: number,
+  target = { x: 0, y: 0, z: 0, lonDeg: 0, latRad: 0, distanceKm: 0 },
+) {
+  const lambdaRad = lonDeg * DEG;
+  const cosB = Math.cos(latRad);
+
+  target.x = distanceKm * cosB * Math.cos(lambdaRad);
+  target.y = distanceKm * cosB * Math.sin(lambdaRad);
+  target.z = distanceKm * Math.sin(latRad);
+  target.lonDeg = lonDeg;
+  target.latRad = latRad;
+  target.distanceKm = distanceKm;
+  return target;
+}
+
 const earthHelio = new THREE.Vector3();
 
 /** Heliocentric ecliptic position in legacy scene units (1 unit = 1,000 km). */
@@ -156,7 +176,52 @@ export function getMoonRotationAngle(date = getSimulationDate()): number {
   return getGeocentricMoonEclipticKm(getMoonEphemerisDate(date)).lonDeg * DEG;
 }
 
-/** Sample one lunar orbit around the current Earth position for path visualization. */
+/** Sample one lunar orbit relative to Earth's center (scene units). */
+export function sampleMoonGeocentricOrbitPath(
+  segments: number,
+  date = getSimulationDate(),
+): Float32Array {
+  const periodDays = MOON_SIDEREAL_PERIOD_DAYS;
+  const epochMs = date.getTime();
+  const out = new Float32Array((segments + 1) * 3);
+  const geo = { x: 0, y: 0, z: 0, lonDeg: 0, latRad: 0, distanceKm: 0 };
+
+  if (isMoonOrbitLocked()) {
+    const frozen = getFrozenGeocentricMoonKm();
+    for (let i = 0; i <= segments; i += 1) {
+      const lonDeg = frozen.lonDeg + (i / segments) * 360;
+      geocentricKmFromLonLat(lonDeg, frozen.latRad, frozen.distanceKm, geo);
+      out[i * 3] = geo.x / KM_PER_UNIT;
+      out[i * 3 + 1] = geo.y / KM_PER_UNIT;
+      out[i * 3 + 2] = geo.z / KM_PER_UNIT;
+    }
+    const last = segments * 3;
+    out[last] = out[0];
+    out[last + 1] = out[1];
+    out[last + 2] = out[2];
+    return out;
+  }
+
+  for (let i = 0; i <= segments; i += 1) {
+    const simDate = new Date(
+      epochMs + (i / segments) * periodDays * 86_400_000,
+    );
+    getGeocentricMoonEclipticKm(getMoonEphemerisDate(simDate), geo);
+    out[i * 3] = geo.x / KM_PER_UNIT;
+    out[i * 3 + 1] = geo.y / KM_PER_UNIT;
+    out[i * 3 + 2] = geo.z / KM_PER_UNIT;
+  }
+
+  // Close the loop for line rendering (sidereal sampling leaves a small ephemeris gap).
+  const last = segments * 3;
+  out[last] = out[0];
+  out[last + 1] = out[1];
+  out[last + 2] = out[2];
+
+  return out;
+}
+
+/** Sample one lunar orbit in heliocentric space for path visualization. */
 export function sampleMoonOrbitPath(
   segments: number,
   date = getSimulationDate(),
@@ -165,16 +230,28 @@ export function sampleMoonOrbitPath(
   const epochMs = date.getTime();
   const out = new Float32Array((segments + 1) * 3);
   const geo = { x: 0, y: 0, z: 0, lonDeg: 0, latRad: 0, distanceKm: 0 };
-  getHeliocentricPosition("earth", 0, date, earthHelio);
+  const earth = { x: 0, y: 0, z: 0 };
+
+  if (isMoonOrbitLocked()) {
+    const geocentric = sampleMoonGeocentricOrbitPath(segments, date);
+    getHeliocentricPosition("earth", 0, date, earth);
+    for (let i = 0; i <= segments; i += 1) {
+      out[i * 3] = earth.x + geocentric[i * 3];
+      out[i * 3 + 1] = earth.y + geocentric[i * 3 + 1];
+      out[i * 3 + 2] = earth.z + geocentric[i * 3 + 2];
+    }
+    return out;
+  }
 
   for (let i = 0; i <= segments; i += 1) {
-    const sampleDate = new Date(
+    const simDate = new Date(
       epochMs + (i / segments) * periodDays * 86_400_000,
     );
-    getGeocentricMoonEclipticKm(sampleDate, geo);
-    out[i * 3] = earthHelio.x + geo.x / KM_PER_UNIT;
-    out[i * 3 + 1] = earthHelio.y + geo.y / KM_PER_UNIT;
-    out[i * 3 + 2] = earthHelio.z + geo.z / KM_PER_UNIT;
+    getHeliocentricPosition("earth", 0, simDate, earth);
+    getGeocentricMoonEclipticKm(getMoonEphemerisDate(simDate), geo);
+    out[i * 3] = earth.x + geo.x / KM_PER_UNIT;
+    out[i * 3 + 1] = earth.y + geo.y / KM_PER_UNIT;
+    out[i * 3 + 2] = earth.z + geo.z / KM_PER_UNIT;
   }
 
   return out;

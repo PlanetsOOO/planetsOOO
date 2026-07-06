@@ -25,7 +25,7 @@ export function NavigationHint() {
   if (mobileLandscape) {
     return (
       <p
-        className="fixed bottom-4 left-1/2 z-30 max-w-[90vw] -translate-x-1/2 text-center text-[9px] tracking-widest uppercase text-zinc-600 pointer-events-none select-none"
+        className="fixed bottom-[22px] left-1/2 z-30 max-w-[90vw] -translate-x-1/2 text-center text-[11px] tracking-widest uppercase text-zinc-600 pointer-events-none select-none"
         aria-live="polite"
       >
         Left: thrust · drag up to L¹ / L² · Right: steer · Menu to exit
@@ -35,7 +35,7 @@ export function NavigationHint() {
 
   return (
     <p
-      className="fixed bottom-5 left-1/2 -translate-x-1/2 z-30 text-[10px] tracking-widest uppercase text-zinc-600 pointer-events-none select-none"
+      className="fixed bottom-[26px] left-1/2 -translate-x-1/2 z-30 text-[12px] tracking-widest uppercase text-zinc-600 pointer-events-none select-none"
       aria-live="polite"
     >
       Click view to fly · Center dot selects · Tab exits flight · Space brake
