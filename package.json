@@ -5,7 +5,7 @@
   "scripts": {
     "dev": "next dev",
     "dev:mobile": "next dev --hostname 0.0.0.0",
-    "build": "next build",
+    "build": "next build --webpack",
     "start": "next start",
     "lint": "eslint",
     "build:extension-offline": "node scripts/build-extension-offline.mjs",
@@ -24,7 +24,7 @@
     "next": "16.2.6",
     "react": "19.2.4",
     "react-dom": "19.2.4",
-    "satellite.js": "^7.0.1",
+    "satellite.js": "6.0.2",
     "stripe": "^22.2.0",
     "three": "^0.184.0"
   },
