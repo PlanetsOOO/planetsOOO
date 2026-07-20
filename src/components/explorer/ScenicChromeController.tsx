@@ -6,6 +6,7 @@ import {
   discoveryAutopilotState,
   nudgeScenicOrbitFov,
 } from "@/lib/discoveryAutopilot";
+import { isTrackableFocusOrbitActive } from "@/lib/trackableFocusState";
 
 const ARROW_KEYS = new Set([
   "ArrowUp",
@@ -25,14 +26,12 @@ export function ScenicChromeController() {
   }, [discoveryAutopilotActive, markScenicChromeActivity]);
 
   useEffect(() => {
-    if (!discoveryAutopilotActive) return;
-
-    markScenicChromeActivity();
-
     const onKeyDown = (e: KeyboardEvent) => {
-      if (!activeRef.current) return;
+      const scenicOrbit =
+        (activeRef.current && discoveryAutopilotState.phase === "orbit") ||
+        isTrackableFocusOrbitActive();
 
-      if (discoveryAutopilotState.phase === "orbit") {
+      if (scenicOrbit) {
         if (e.key === "ArrowUp") {
           e.preventDefault();
           nudgeScenicOrbitFov("in");
@@ -45,13 +44,15 @@ export function ScenicChromeController() {
         }
       }
 
+      if (!activeRef.current && !isTrackableFocusOrbitActive()) return;
+
       if (!ARROW_KEYS.has(e.key)) {
         markScenicRef.current();
       }
     };
 
     const onPointer = () => {
-      if (activeRef.current) {
+      if (activeRef.current || isTrackableFocusOrbitActive()) {
         markScenicRef.current();
       }
     };
@@ -65,6 +66,11 @@ export function ScenicChromeController() {
       window.removeEventListener("mousedown", onPointer);
       window.removeEventListener("wheel", onPointer);
     };
+  }, [discoveryAutopilotActive, markScenicChromeActivity]);
+
+  useEffect(() => {
+    if (!discoveryAutopilotActive) return;
+    markScenicChromeActivity();
   }, [discoveryAutopilotActive, markScenicChromeActivity]);
 
   return null;

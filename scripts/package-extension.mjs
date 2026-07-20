@@ -47,6 +47,7 @@ const INCLUDE = [
   "popup.html",
   "popup.css",
   "popup.js",
+  "premiumIdentity.js",
   "screensaver.html",
   "screensaver.js",
   "screensaver.css",
@@ -122,6 +123,18 @@ function writeManifest(filePath, manifest) {
   writeFileSync(filePath, `${JSON.stringify(manifest, null, 2)}\n`);
 }
 
+function applyOAuthClientId(manifest) {
+  const clientId = process.env.CHROME_EXTENSION_OAUTH_CLIENT_ID?.trim();
+  if (!clientId || !manifest.oauth2) return manifest;
+  return {
+    ...manifest,
+    oauth2: {
+      ...manifest.oauth2,
+      client_id: clientId,
+    },
+  };
+}
+
 // --- Validate inputs and shipped files --------------------------------------
 if (!existsSync(storeManifestPath)) {
   console.error("Missing extension/manifest.store.json");
@@ -155,7 +168,9 @@ if (version !== devManifest.version) {
   console.log(`manifest version unchanged (${version})`);
 }
 
-const packagedManifest = packageDev ? devManifest : storeManifest;
+const packagedManifest = applyOAuthClientId(
+  packageDev ? devManifest : storeManifest,
+);
 const variantLabel = packageDev ? "dev" : "store";
 
 // --- Stage allowlisted files with the chosen manifest -----------------------
@@ -169,6 +184,20 @@ for (const entry of INCLUDE) {
 }
 
 writeManifest(path.join(stageDir, "manifest.json"), packagedManifest);
+
+if (!packageDev) {
+  const oauthId = packagedManifest.oauth2?.client_id ?? "";
+  if (
+    !oauthId ||
+    oauthId.includes("REPLACE_WITH_CHROME_EXTENSION_OAUTH_CLIENT_ID")
+  ) {
+    console.warn(
+      "\n⚠ Store zip OAuth client_id is still a placeholder.\n" +
+        "  Premium restore will fail until you package with:\n" +
+        "  CHROME_EXTENSION_OAUTH_CLIENT_ID=\"YOUR_ID.apps.googleusercontent.com\" npm run package:extension\n",
+    );
+  }
+}
 
 // --- Zip the staged tree ----------------------------------------------------
 const slug = (packagedManifest.name || "extension")

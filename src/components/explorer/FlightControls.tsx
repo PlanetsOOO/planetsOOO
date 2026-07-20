@@ -51,6 +51,7 @@ const MOUSE_SENSITIVITY = 0.0022;
 const WHEEL_LOOK_SENSITIVITY = 0.00018;
 const PITCH_LIMIT = Math.PI / 2 - 0.12;
 
+
 function clampPitch(pitch: number): number {
   return THREE.MathUtils.clamp(pitch, -PITCH_LIMIT, PITCH_LIMIT);
 }

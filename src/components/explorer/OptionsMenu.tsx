@@ -4,8 +4,10 @@ import { useEffect, useRef, type SyntheticEvent } from "react";
 import { useExplorer } from "@/context/ExplorerContext";
 import { discoveryAutopilotState } from "@/lib/discoveryAutopilot";
 import { isExtensionPackaged } from "@/lib/screensaverConfig";
+import { useMobileLandscape } from "@/hooks/useMobileLandscape";
 import { PlanetSearch } from "./PlanetSearch";
 import { RoutePathPlanner } from "./RoutePathPlanner";
+import { ChromeIcon } from "@/components/icons/ChromeIcon";
 
 export function OptionsMenu() {
   const {
@@ -35,8 +37,9 @@ export function OptionsMenu() {
   } = useExplorer();
   const panelRef = useRef<HTMLDivElement>(null);
   const website = !isExtensionPackaged();
-  // Website: menu only in tab/browse mode (before flight or after Tab exit).
-  const menuAvailable = !website || !navigationActive;
+  const mobileOnline = website && useMobileLandscape();
+  // Website desktop: menu only in browse mode. Mobile online + extension: always.
+  const menuAvailable = !website || !navigationActive || mobileOnline;
 
   useEffect(() => {
     if (!menuAvailable && menuOpen) setMenuOpen(false);
@@ -132,60 +135,76 @@ export function OptionsMenu() {
             checked={paused}
             onChange={setPaused}
           />
-          <label className="mt-3 flex flex-col gap-1.5 text-[10px] text-zinc-500 uppercase tracking-wider">
-            Travel speed
-            <input
-              type="range"
-              min={1}
-              max={5000}
-              step={1}
-              value={travelSpeed}
-              onChange={(e) => setTravelSpeed(parseInt(e.target.value, 10))}
-              className="w-full accent-sky-500 h-0.5"
-            />
-            <span className="font-mono text-zinc-400 normal-case">
-              {travelSpeed}× cruise
-            </span>
-          </label>
-          <div className="flex gap-1 mt-1">
-            <button
-              type="button"
-              onClick={() => setSpeedUnit("kph")}
-              className={`flex-1 rounded py-1 text-[10px] uppercase tracking-wider transition-colors ${
-                speedUnit === "kph"
-                  ? "bg-white/10 text-zinc-200"
-                  : "text-zinc-600 hover:text-zinc-400"
-              }`}
-            >
-              km/h
-            </button>
-            <button
-              type="button"
-              onClick={() => setSpeedUnit("mph")}
-              className={`flex-1 rounded py-1 text-[10px] uppercase tracking-wider transition-colors ${
-                speedUnit === "mph"
-                  ? "bg-white/10 text-zinc-200"
-                  : "text-zinc-600 hover:text-zinc-400"
-              }`}
-            >
-              mph
-            </button>
-          </div>
-          <label className="mt-3 flex flex-col gap-1.5 text-[10px] text-zinc-500 uppercase tracking-wider">
-            Orbit time scale
-            <input
-              type="range"
-              min={0.1}
-              max={4}
-              step={0.1}
-              value={speed}
-              onChange={(e) => setSpeed(parseFloat(e.target.value))}
-              className="w-full accent-zinc-400 h-0.5"
-            />
-            <span className="font-mono text-zinc-400 normal-case">
-              {speed.toFixed(1)}×
-            </span>
-          </label>
+          {!website && (
+            <>
+              <label className="mt-3 flex flex-col gap-1.5 text-[10px] text-zinc-500 uppercase tracking-wider">
+                Travel speed
+                <input
+                  type="range"
+                  min={1}
+                  max={5000}
+                  step={1}
+                  value={travelSpeed}
+                  onChange={(e) => setTravelSpeed(parseInt(e.target.value, 10))}
+                  className="w-full accent-sky-500 h-0.5"
+                />
+                <span className="font-mono text-zinc-400 normal-case">
+                  {travelSpeed}× cruise
+                </span>
+              </label>
+              <div className="flex gap-1 mt-1">
+                <button
+                  type="button"
+                  onClick={() => setSpeedUnit("kph")}
+                  className={`flex-1 rounded py-1 text-[10px] uppercase tracking-wider transition-colors ${
+                    speedUnit === "kph"
+                      ? "bg-white/10 text-zinc-200"
+                      : "text-zinc-600 hover:text-zinc-400"
+                  }`}
+                >
+                  km/h
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setSpeedUnit("mph")}
+                  className={`flex-1 rounded py-1 text-[10px] uppercase tracking-wider transition-colors ${
+                    speedUnit === "mph"
+                      ? "bg-white/10 text-zinc-200"
+                      : "text-zinc-600 hover:text-zinc-400"
+                  }`}
+                >
+                  mph
+                </button>
+              </div>
+              <label className="mt-3 flex flex-col gap-1.5 text-[10px] text-zinc-500 uppercase tracking-wider">
+                Orbit time scale
+                <input
+                  type="range"
+                  min={0.1}
+                  max={4}
+                  step={0.1}
+                  value={speed}
+                  onChange={(e) => setSpeed(parseFloat(e.target.value))}
+                  className="w-full accent-zinc-400 h-0.5"
+                />
+                <span className="font-mono text-zinc-400 normal-case">
+                  {speed.toFixed(1)}×
+                </span>
+              </label>
+            </>
+          )}
+          {website && (
+            <div className="mt-4 flex justify-center">
+              <a
+                href="/extension"
+                className="inline-flex rounded-md opacity-75 transition hover:opacity-100 focus:outline-none focus-visible:ring-1 focus-visible:ring-white/30"
+                aria-label="Get the Orbit Chrome extension"
+                title="Get the Orbit Chrome extension"
+              >
+                <ChromeIcon className="h-8 w-8" />
+              </a>
+            </div>
+          )}
           <p className="mt-4 border-t border-white/5 pt-3 text-center text-[10px] leading-5 text-zinc-600">
             © {new Date().getFullYear()} planets.ooo. All rights reserved.
             <span className="mx-1.5 text-zinc-700">·</span>

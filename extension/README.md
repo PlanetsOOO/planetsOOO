@@ -107,8 +107,61 @@ app needs these Vercel env vars:
 ```bash
 STRIPE_SECRET_KEY=sk_live_...
 PREMIUM_ENTITLEMENT_SECRET=<random long secret>
+CHROME_EXTENSION_OAUTH_CLIENT_ID=<id>.apps.googleusercontent.com
 ```
 
-The extension popup opens `/premium` with the current extension id and a local
-install id. After checkout, `/premium/success` verifies the Stripe session on
+Create the OAuth client in [Google Cloud Console](https://console.cloud.google.com/apis/credentials) as type **Chrome extension** (use your extension ID from `chrome://extensions`). Set the same client id in:
+
+1. Vercel env `CHROME_EXTENSION_OAUTH_CLIENT_ID`
+2. Extension manifest `oauth2.client_id` (or pass the env var when running `npm run package:extension` — the packager injects it into the store zip)
+
+Premium restore verifies a real Google sign-in token server-side; GAIA id alone is no longer accepted on `/api/premium/restore`.
+
+Install/startup and popup open only attempt a **silent** restore (`getAuthToken({ interactive: false })`) so free users are not prompted. Google consent appears only when the user opens **Premium** (purchase or re-link after reinstall). Fully automatic restore after every uninstall is **not** guaranteed — Chrome often clears the extension OAuth grant on uninstall; silent restore works when a token is still cached, otherwise the next Premium click re-grants and restores.
+
+## Chrome Web Store listing (unlisted → public)
+
+Your draft is **published and unlisted** when the zip is approved but not discoverable. To ship Premium restore and move to a public listing:
+
+### Before you upload
+
+1. **Production env on Vercel** (planets.ooo):
+   - `STRIPE_SECRET_KEY` (live)
+   - `PREMIUM_ENTITLEMENT_SECRET`
+   - `CHROME_EXTENSION_OAUTH_CLIENT_ID` (Chrome extension OAuth client for your **published** extension ID)
+2. **Google Cloud OAuth client** — type **Chrome extension**, extension ID from `chrome://extensions` on the published build (not unpacked dev).
+3. **Package with OAuth injected** (store zip only):
+   ```bash
+   CHROME_EXTENSION_OAUTH_CLIENT_ID="YOUR_ID.apps.googleusercontent.com" npm run package:extension
+   ```
+   Verify the zip manifest does **not** contain `REPLACE_WITH_CHROME_EXTENSION_OAUTH_CLIENT_ID`.
+4. **Smoke-test restore**: purchase (consent once via Premium) → remove extension → reinstall → silent restore if possible; if not, open **Premium** once → unlock.
+
+### Upload new version
+
+1. [Chrome Web Store Developer Dashboard](https://chrome.google.com/webstore/devconsole) → your item → **Package** → **Upload new package** → `dist/orbit-screensaver-X.Y.Z.zip`
+2. **Privacy practices** tab: single purpose, data use, link `https://www.planets.ooo/privacy`
+3. **Permission justifications** (prepare prose):
+   - `idle` — detect inactivity to start screensaver
+   - `storage` — settings and Premium entitlement locally
+   - `tabs` — find/close screensaver tabs
+   - `system.display` — multi-monitor selection
+   - `identity` / `identity.email` — bind Premium to Chrome profile; OAuth restore after reinstall
+   - Host `planets.ooo` — scenic tour, Premium checkout, entitlement verify/restore APIs
+
+### Move from unlisted to listed
+
+1. After the new version passes review, open **Distribution** → **Visibility**
+2. Change from **Unlisted** to **Public** (or **Private** if using a Google Group)
+3. Complete **Store listing**: description, 1280×800 screenshots (at least one), 440×280 promo tile, category **Fun**
+4. Submit for **listing review** if prompted (policy + metadata, separate from package review)
+
+### Post-launch checks
+
+- Premium purchase → success page → extension unlock
+- Reinstall → silent restore when Chrome still has the grant; otherwise open **Premium** once
+- Offline fallback: disable network → Preview still opens packaged scenic/flight
+- `ALLOW_ADMIN_PREMIUM_OVERRIDE` is `false` in uploaded zip (`background.js` / `popup.js`)
+
+The extension popup opens `/premium` with the current extension id, install id, and Chrome profile id. After checkout, `/premium/success` verifies the Stripe session on
 the server and sends the entitlement back to the extension.

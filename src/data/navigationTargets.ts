@@ -1,10 +1,11 @@
+import { ISS } from "@/data/iss";
 import { MOON } from "@/data/moon";
 import { PLANETS, type PlanetId } from "@/data/planets";
 
-/** Planets and Earth's Moon. */
-export type NavTargetId = PlanetId | "moon";
+/** Planets, Earth's Moon, and LEO trackables. */
+export type NavTargetId = PlanetId | "moon" | "iss";
 
-export type NavTargetKind = "planet" | "moon";
+export type NavTargetKind = "planet" | "moon" | "satellite";
 
 export interface NavTarget {
   id: NavTargetId;
@@ -18,6 +19,12 @@ export const MOON_TARGET: NavTarget = {
   kind: "moon",
 };
 
+export const ISS_TARGET: NavTarget = {
+  id: "iss",
+  name: ISS.name,
+  kind: "satellite",
+};
+
 export const NAV_TARGETS: NavTarget[] = [
   ...PLANETS.map((p) => ({
     id: p.id as NavTargetId,
@@ -25,6 +32,7 @@ export const NAV_TARGETS: NavTarget[] = [
     kind: "planet" as const,
   })),
   MOON_TARGET,
+  ISS_TARGET,
 ];
 
 const ALIASES: Record<string, NavTargetId> = {
@@ -32,6 +40,9 @@ const ALIASES: Record<string, NavTargetId> = {
   moon: "moon",
   luna: "moon",
   "the moon": "moon",
+  iss: "iss",
+  "international space station": "iss",
+  "space station": "iss",
 };
 
 export function isNavTargetId(id: string): id is NavTargetId {
@@ -50,6 +61,14 @@ export function getNavTargetName(id: NavTargetId): string {
 
 export function isMoonTarget(id: NavTargetId): id is "moon" {
   return id === "moon";
+}
+
+export function isIssTarget(id: NavTargetId): id is "iss" {
+  return id === "iss";
+}
+
+export function isSatelliteTarget(id: NavTargetId): id is "iss" {
+  return id === "iss";
 }
 
 export function isPlanetTarget(id: NavTargetId): id is PlanetId {

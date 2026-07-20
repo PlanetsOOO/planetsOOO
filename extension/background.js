@@ -1,3 +1,5 @@
+importScripts("premiumIdentity.js");
+
 const DEFAULTS = {
   enabled: true,
   idleMinutes: 5,
@@ -33,6 +35,7 @@ const OFFLINE_SCREENSAVER_PAGE = "screensaver.html";
 const PREMIUM_OFFLINE_SCREENSAVER_PAGE = "screensaver-premium.html";
 const REACT_OFFLINE_SCREENSAVER_PAGE = "screensaver-react.html";
 const PREMIUM_VERIFY_PATH = "/api/premium/verify";
+const PREMIUM_RESTORE_PATH = "/api/premium/restore";
 const PREMIUM_WINDOW_WIDTH = 420;
 const PREMIUM_WINDOW_FALLBACK_HEIGHT = 760;
 const PREMIUM_WINDOW_MIN_HEIGHT = 640;
@@ -113,6 +116,93 @@ function allowedPremiumSender(url) {
 
 function premiumVerifyUrl() {
   return new URL(PREMIUM_VERIFY_PATH, DEFAULTS.siteUrl).toString();
+}
+
+function premiumRestoreUrl() {
+  return new URL(PREMIUM_RESTORE_PATH, DEFAULTS.siteUrl).toString();
+}
+
+async function savePremiumEntitlement(entitlement, payload) {
+  await Promise.all([
+    chrome.storage.sync.set({ plan: "premium" }),
+    chrome.storage.local.set({
+      premiumEntitlement: entitlement,
+      premiumInstallId: payload.installId,
+    }),
+  ]);
+}
+
+async function tryRestorePremium({ interactive = false } = {}) {
+  const local = await chrome.storage.local.get({
+    premiumEntitlement: "",
+    premiumInstallId: "",
+  });
+  if (local.premiumEntitlement) return { ok: true, restored: false };
+
+  const accessToken = await getChromeAccessTokenForRestore(interactive);
+  if (!accessToken) {
+    return {
+      ok: false,
+      restored: false,
+      needsAuth: true,
+      error: interactive
+        ? "Chrome sign-in was cancelled or unavailable."
+        : "Sign in with Chrome to restore Premium.",
+    };
+  }
+
+  const installId = local.premiumInstallId || (await getPremiumInstallId());
+  const res = await fetch(premiumRestoreUrl(), {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    cache: "no-store",
+    body: JSON.stringify({
+      extensionId: chrome.runtime.id,
+      installId,
+      accessToken,
+    }),
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok || !data?.entitlement) {
+    return { ok: false, restored: false, error: data?.error };
+  }
+
+  const payload = await verifyPremiumEntitlementWithServer(data.entitlement);
+  if (
+    payload.product !== "orbit-premium" ||
+    payload.plan !== "premium" ||
+    payload.extensionId !== chrome.runtime.id ||
+    payload.installId !== installId
+  ) {
+    throw new Error("Invalid restore entitlement.");
+  }
+
+  await savePremiumEntitlement(data.entitlement, payload);
+  return { ok: true, restored: true };
+}
+
+async function verifyStoredPremium() {
+  const local = await chrome.storage.local.get({
+    premiumEntitlement: "",
+    premiumInstallId: "",
+  });
+  if (!local.premiumEntitlement) return { ok: true, active: false };
+
+  try {
+    await verifyPremiumEntitlementWithServer(local.premiumEntitlement);
+    return { ok: true, active: true };
+  } catch {
+    await chrome.storage.local.set({ premiumEntitlement: "" });
+    await chrome.storage.sync.set({ plan: "basic" });
+    return { ok: true, active: false };
+  }
+}
+
+/** Startup / popup: verify token + silent restore only (no OAuth consent UI). */
+async function syncPremiumOnStartup() {
+  const verified = await verifyStoredPremium();
+  if (verified.active) return { ok: true, restored: false };
+  return tryRestorePremium({ interactive: false });
 }
 
 function isAllowedPremiumCheckoutUrl(url) {
@@ -942,10 +1032,12 @@ if (chrome.windows.onBoundsChanged) {
 
 chrome.runtime.onInstalled.addListener(() => {
   void applyIdleInterval();
+  void syncPremiumOnStartup();
 });
 
 chrome.runtime.onStartup.addListener(() => {
   void applyIdleInterval();
+  void syncPremiumOnStartup();
 });
 
 chrome.storage.onChanged.addListener((changes, area) => {
@@ -971,6 +1063,27 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         sendMessageResponse(sendResponse, {
           ok: false,
           error: err instanceof Error ? err.message : String(err),
+        }),
+    );
+    return true;
+  }
+
+  if (message.type === "restore-premium") {
+    if (!isPopupSender(sender) && !isExtensionPageSender(sender)) {
+      sendMessageResponse(sendResponse, { ok: false, error: "Untrusted sender." });
+      return false;
+    }
+    const interactive = Boolean(message.interactive);
+    const run = interactive
+      ? tryRestorePremium({ interactive: true })
+      : syncPremiumOnStartup();
+    run.then(
+      (result) => sendMessageResponse(sendResponse, result),
+      (err) =>
+        sendMessageResponse(sendResponse, {
+          ok: false,
+          restored: false,
+          error: err instanceof Error ? err.message : "Unable to restore Premium.",
         }),
     );
     return true;
@@ -1172,21 +1285,7 @@ chrome.runtime.onMessageExternal.addListener((message, sender, sendResponse) => 
         throw new Error("Invalid entitlement.");
       }
 
-      const local = await chrome.storage.local.get({ premiumInstallId: "" });
-      if (
-        local.premiumInstallId &&
-        payload.installId !== local.premiumInstallId
-      ) {
-        throw new Error("Entitlement belongs to a different install.");
-      }
-
-      await Promise.all([
-        chrome.storage.sync.set({ plan: "premium" }),
-        chrome.storage.local.set({
-          premiumEntitlement: message.entitlement,
-          premiumInstallId: payload.installId,
-        }),
-      ]);
+      await savePremiumEntitlement(message.entitlement, payload);
       sendResponse({ ok: true, plan: "premium" });
     })
     .catch((err) => {

@@ -1,12 +1,14 @@
 import { NextResponse } from "next/server";
 import Stripe from "stripe";
+import {
+  CHROME_EXTENSION_ID_RE,
+  CHROME_GAIA_ID_RE,
+  UUID_RE,
+} from "@/lib/premium/validation";
 
 export const runtime = "nodejs";
 
 const PREMIUM_PRICE_CENTS = 299;
-const CHROME_EXTENSION_ID_RE = /^[a-p]{32}$/;
-const UUID_RE =
-  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 function requiredEnv(name: string): string {
   const value = process.env[name]?.trim();
@@ -34,10 +36,14 @@ export async function POST(request: Request) {
   const formData = await request.formData();
   const extensionId = cleanParam(formData.get("extensionId"));
   const installId = cleanParam(formData.get("installId"));
+  const chromeGaiaId = cleanParam(formData.get("chromeGaiaId"));
 
-  if (!extensionId || !installId) {
+  if (!extensionId || !installId || !chromeGaiaId) {
     return NextResponse.json(
-      { error: "Extension id and install id are required." },
+      {
+        error:
+          "Extension id, install id, and Chrome profile id are required. Sign into Chrome and reopen Premium from the extension.",
+      },
       { status: 400 },
     );
   }
@@ -46,6 +52,9 @@ export async function POST(request: Request) {
   }
   if (!UUID_RE.test(installId)) {
     return invalidParam("Install id is invalid.");
+  }
+  if (!CHROME_GAIA_ID_RE.test(chromeGaiaId)) {
+    return invalidParam("Chrome profile id is invalid.");
   }
 
   const origin = new URL(request.url).origin;
@@ -56,6 +65,7 @@ export async function POST(request: Request) {
   const cancelUrl = new URL("/premium", origin);
   cancelUrl.searchParams.set("extensionId", extensionId);
   cancelUrl.searchParams.set("installId", installId);
+  cancelUrl.searchParams.set("chromeGaiaId", chromeGaiaId);
   cancelUrl.searchParams.set("canceled", "1");
 
   let session: Stripe.Checkout.Session;
@@ -68,6 +78,7 @@ export async function POST(request: Request) {
         product: "orbit-premium",
         extensionId,
         installId,
+        chromeGaiaId,
       },
       line_items: [
         {

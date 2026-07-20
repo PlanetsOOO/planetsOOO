@@ -101,8 +101,46 @@ export async function registerPremiumPurchase(
   record: PremiumPurchaseRecord,
 ): Promise<void> {
   await mutateDb((db) => {
-    db.premiumPurchases[record.stripeSessionId] = record;
+    db.premiumPurchases[record.stripeSessionId] = {
+      ...record,
+      activeInstallId: record.activeInstallId ?? record.installId,
+    };
   });
+}
+
+export async function getPremiumPurchaseByStripeSessionId(
+  stripeSessionId: string,
+): Promise<PremiumPurchaseRecord | null> {
+  const db = await readDb();
+  return db.premiumPurchases[stripeSessionId] ?? null;
+}
+
+export async function getPremiumPurchaseByGaiaId(
+  extensionId: string,
+  chromeGaiaId: string,
+): Promise<PremiumPurchaseRecord | null> {
+  const db = await readDb();
+  return (
+    Object.values(db.premiumPurchases).find(
+      (purchase) =>
+        purchase.extensionId === extensionId &&
+        purchase.chromeGaiaId === chromeGaiaId,
+    ) ?? null
+  );
+}
+
+export async function updatePremiumActiveInstall(
+  stripeSessionId: string,
+  activeInstallId: string,
+): Promise<PremiumPurchaseRecord | null> {
+  let updated: PremiumPurchaseRecord | null = null;
+  await mutateDb((db) => {
+    const purchase = db.premiumPurchases[stripeSessionId];
+    if (!purchase) return;
+    updated = { ...purchase, activeInstallId };
+    db.premiumPurchases[stripeSessionId] = updated;
+  });
+  return updated;
 }
 
 export async function linkPremiumPurchaseToUser(
@@ -121,10 +159,11 @@ export async function getPremiumPurchaseByInstall(
 ): Promise<PremiumPurchaseRecord | null> {
   const db = await readDb();
   return (
-    Object.values(db.premiumPurchases).find(
-      (purchase) =>
-        purchase.extensionId === extensionId && purchase.installId === installId,
-    ) ?? null
+    Object.values(db.premiumPurchases).find((purchase) => {
+      if (purchase.extensionId !== extensionId) return false;
+      const active = purchase.activeInstallId ?? purchase.installId;
+      return active === installId || purchase.installId === installId;
+    }) ?? null
   );
 }
 
@@ -206,3 +245,4 @@ export async function listLeaderboard(limit = 10): Promise<PlayerProgressionReco
     .sort((a, b) => b.discoveries - a.discoveries || b.roomJoins - a.roomJoins)
     .slice(0, limit);
 }
+

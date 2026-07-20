@@ -19,7 +19,11 @@ export interface PremiumPurchaseRecord {
   stripeSessionId: string;
   extensionId: string;
   installId: string;
+  /** Current entitled install; updated when Premium is restored after reinstall. */
+  activeInstallId: string;
+  chromeGaiaId?: string;
   userId?: string;
+  claimedAt?: number;
   issuedAt: number;
 }
 
@@ -47,6 +51,7 @@ export interface PlayerProgressionRecord {
   achievements: string[];
   updatedAt: number;
 }
+
 
 export interface EntitlementDatabase {
   users: Record<string, UserRecord>;

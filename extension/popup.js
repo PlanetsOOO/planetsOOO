@@ -25,6 +25,7 @@ const flightKeyEl = document.getElementById("flightKey");
 const exitKeyEl = document.getElementById("exitKey");
 const closeOnActiveEl = document.getElementById("closeOnActive");
 const premiumLinkEl = document.getElementById("premiumLink");
+const premiumStatusEl = document.getElementById("premiumStatus");
 const accountNoticeEl = document.getElementById("accountNotice");
 const accountLinkEl = document.getElementById("accountLink");
 const extensionLinkEl = document.getElementById("extensionLink");
@@ -38,25 +39,19 @@ if (legalYearEl) {
   legalYearEl.textContent = String(new Date().getFullYear());
 }
 
-async function getInstallId() {
-  const stored = await chrome.storage.local.get({ premiumInstallId: "" });
-  if (stored.premiumInstallId) return stored.premiumInstallId;
-  const installId = crypto.randomUUID();
-  await chrome.storage.local.set({ premiumInstallId: installId });
-  return installId;
-}
-
 async function updatePremiumLink() {
   if (!premiumLinkEl) return;
-  const installId = await getInstallId();
+  const installId = await getPremiumInstallId();
+  const chromeGaiaId = await getChromeGaiaId();
   const url = new URL("/premium", DEFAULTS.siteUrl);
   url.searchParams.set("extensionId", chrome.runtime.id);
   url.searchParams.set("installId", installId);
+  if (chromeGaiaId) url.searchParams.set("chromeGaiaId", chromeGaiaId);
   premiumLinkEl.href = url.toString();
 }
 
 async function updateAccountLinks() {
-  const installId = await getInstallId();
+  const installId = await getPremiumInstallId();
   if (accountLinkEl) {
     accountLinkEl.href = new URL("/account", DEFAULTS.siteUrl).toString();
   }
@@ -235,18 +230,110 @@ premiumLinkEl?.addEventListener("click", async (event) => {
   event.preventDefault();
   try {
     await updatePremiumLink();
+    // Premium click is the only intentional OAuth moment: restore if owned,
+    // otherwise open checkout (consent may appear once for this extension).
+    setPremiumStatus("Checking Premium…", "muted");
+    let restoreResult = null;
+    try {
+      restoreResult = await chrome.runtime.sendMessage({
+        type: "restore-premium",
+        interactive: true,
+      });
+    } catch {
+      // Service worker may not be ready yet.
+    }
+    await loadSettings();
+    if (restoreResult?.restored || currentPlan === "premium") {
+      const status = premiumStatusMessage(currentPlan, restoreResult);
+      setPremiumStatus(status.text, status.tone);
+      return;
+    }
+
+    const chromeGaiaId = await getChromeGaiaId();
+    if (!chromeGaiaId) {
+      setPremiumStatus("Sign into Chrome to purchase Premium.", "warn");
+      return;
+    }
     const result = await chrome.runtime.sendMessage({
       type: "open-premium-checkout",
       url: premiumLinkEl.href,
     });
     if (!result?.ok) {
-      console.warn(result?.error ?? "Unable to open Premium.");
+      setPremiumStatus(result?.error ?? "Unable to open Premium.", "warn");
+      return;
     }
+    setPremiumStatus(
+      restoreResult?.needsAuth
+        ? "Complete Chrome access if prompted, then finish checkout."
+        : "Complete checkout to unlock flight on this install.",
+      "muted",
+    );
   } catch (err) {
-    console.warn(err instanceof Error ? err.message : "Unable to open Premium.");
+    setPremiumStatus(
+      err instanceof Error ? err.message : "Unable to open Premium.",
+      "warn",
+    );
   }
 });
 
-void loadSettings();
+function setPremiumStatus(message, tone = "ok") {
+  if (!premiumStatusEl) return;
+  if (!message) {
+    premiumStatusEl.hidden = true;
+    premiumStatusEl.textContent = "";
+    premiumStatusEl.classList.remove("is-warn", "is-muted");
+    return;
+  }
+  premiumStatusEl.hidden = false;
+  premiumStatusEl.textContent = message;
+  premiumStatusEl.classList.toggle("is-warn", tone === "warn");
+  premiumStatusEl.classList.toggle("is-muted", tone === "muted");
+}
+
+function premiumStatusMessage(plan, restoreResult) {
+  if (restoreResult?.restored) {
+    return { text: "Premium restored for this Chrome install.", tone: "ok" };
+  }
+  if (plan === "premium") {
+    return { text: "Premium active on this install.", tone: "ok" };
+  }
+  if (restoreResult?.error === "No Premium purchase found for this Chrome profile.") {
+    return {
+      text: "No Premium purchase on this Chrome profile.",
+      tone: "muted",
+    };
+  }
+  if (restoreResult?.needsAuth) {
+    return {
+      text: "Premium unlocks after purchase. Reinstalls restore when you open Premium.",
+      tone: "muted",
+    };
+  }
+  if (restoreResult?.ok === false && restoreResult?.error) {
+    return { text: restoreResult.error, tone: "warn" };
+  }
+  return {
+    text: "Purchase Premium to unlock flight. Reinstalls restore automatically when possible.",
+    tone: "muted",
+  };
+}
+
+async function refreshPremiumStatus() {
+  let restoreResult = null;
+  try {
+    // Silent only — never open Google consent on popup open / install.
+    restoreResult = await chrome.runtime.sendMessage({
+      type: "restore-premium",
+      interactive: false,
+    });
+  } catch {
+    // Popup may open before the service worker is ready.
+  }
+  await loadSettings();
+  const status = premiumStatusMessage(currentPlan, restoreResult);
+  setPremiumStatus(status.text, status.tone);
+}
+
 void updatePremiumLink();
 void updateAccountLinks();
+void refreshPremiumStatus();

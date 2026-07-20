@@ -1,56 +1,58 @@
 import { LegalFooter } from "@/components/LegalFooter";
+import { ChromeIcon } from "@/components/icons/ChromeIcon";
+import { CHROME_WEB_STORE_URL } from "@/lib/chromeWebStore";
 
 export default function ExtensionDownloadPage() {
   return (
-    <main className="min-h-screen bg-[#030508] px-6 py-10 text-zinc-200">
-      <section className="mx-auto flex min-h-[80vh] max-w-2xl flex-col justify-center">
+    <main className="relative min-h-screen overflow-hidden bg-[#030508] text-zinc-200">
+      <div
+        className="pointer-events-none absolute inset-0 opacity-80"
+        style={{
+          background:
+            "radial-gradient(ellipse 80% 50% at 50% -10%, rgba(56,189,248,0.18), transparent 55%), radial-gradient(ellipse 60% 40% at 80% 80%, rgba(14,165,233,0.08), transparent 50%)",
+        }}
+        aria-hidden
+      />
+
+      <section className="relative mx-auto flex min-h-[80vh] max-w-2xl flex-col justify-center px-6 py-10">
         <p className="mb-3 font-mono text-xs uppercase tracking-[0.35em] text-sky-300/60">
           Orbit Screensaver
         </p>
         <h1 className="text-4xl font-semibold tracking-tight text-zinc-50 sm:text-5xl">
-          Get the Orbit Chrome extension
+          Install from the Chrome Web Store
         </h1>
         <p className="mt-5 max-w-xl text-sm leading-7 text-zinc-400">
-          Premium checkout is linked to a specific extension install. Open
-          Premium from the Orbit extension popup so your unlock can be applied to
-          this browser.
+          Free scenic idle tour on planets.ooo. Premium unlocks offline flight from
+          the extension popup. Sign into Chrome so Premium can restore after
+          reinstall.
         </p>
 
-        <div className="mt-8 rounded-2xl border border-white/10 bg-white/[0.03] p-5">
-          <div className="flex items-start gap-4">
-            <div
-              className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-sky-300/20 bg-sky-300/10 text-sky-200"
-              aria-hidden="true"
-            >
-              <svg viewBox="0 0 24 24" className="h-6 w-6" fill="none">
-                <path
-                  d="M9 3h6v4h4v6h-4v8H9v-8H5V7h4V3Z"
-                  stroke="currentColor"
-                  strokeWidth="1.5"
-                  strokeLinejoin="round"
-                />
-              </svg>
-            </div>
-            <div>
-              <p className="font-mono text-xs uppercase tracking-[0.25em] text-zinc-500">
-                Chrome extension
-              </p>
-              <p className="mt-2 text-sm leading-7 text-zinc-300">
-                The Chrome Web Store listing is coming soon. For local testing,
-                reload the unpacked extension from `chrome://extensions`, then
-                choose Premium from the extension popup.
-              </p>
-            </div>
-          </div>
-
-          <button
-            type="button"
-            disabled
-            className="mt-6 w-full cursor-not-allowed rounded-xl border border-zinc-700 bg-zinc-800 px-4 py-3 text-sm font-semibold text-zinc-500"
+        <div className="mt-10 space-y-4">
+          <a
+            href={CHROME_WEB_STORE_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="group flex w-full items-center justify-center gap-3 rounded-xl border border-sky-300/35 bg-sky-400/15 px-5 py-4 text-center text-sm font-semibold text-sky-50 transition hover:border-sky-300/50 hover:bg-sky-400/25"
           >
-            Chrome Web Store link coming soon
-          </button>
+            <ChromeIcon className="h-6 w-6" />
+            Add to Chrome
+          </a>
+          <p className="text-center text-xs leading-5 text-zinc-600">
+            Opens the official Chrome Web Store listing. Chrome installs and updates
+            the extension from there — we do not host a separate download file.
+          </p>
         </div>
+
+        <ul className="mt-12 space-y-4 text-sm leading-7 text-zinc-400">
+          <li>
+            <span className="font-medium text-zinc-200">Basic (free)</span> — idle
+            screensaver with the scenic solar system tour when online.
+          </li>
+          <li>
+            <span className="font-medium text-zinc-200">Premium ($2.99)</span> —
+            offline flight from the popup after checkout on planets.ooo.
+          </li>
+        </ul>
 
         <LegalFooter />
       </section>

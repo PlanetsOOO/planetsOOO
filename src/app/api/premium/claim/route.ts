@@ -1,7 +1,11 @@
 import { NextResponse } from "next/server";
 import Stripe from "stripe";
 import { signPremiumEntitlement } from "@/lib/premium/entitlement";
-import { registerPremiumPurchase } from "@/lib/entitlements/store";
+import {
+  getPremiumPurchaseByStripeSessionId,
+  registerPremiumPurchase,
+} from "@/lib/entitlements/store";
+import { CHROME_GAIA_ID_RE } from "@/lib/premium/validation";
 import { getWebSession } from "@/lib/multiplayer/access";
 
 export const runtime = "nodejs";
@@ -11,6 +15,7 @@ const STRIPE_SESSION_ID_RE = /^cs_(test|live)_[A-Za-z0-9_]+$/;
 
 interface ClaimBody {
   sessionId?: string;
+  chromeGaiaId?: string;
 }
 
 function requiredEnv(name: string): string {
@@ -78,6 +83,43 @@ export async function POST(request: Request) {
     );
   }
 
+  const chromeGaiaId =
+    session.metadata?.chromeGaiaId?.trim() ||
+    body.chromeGaiaId?.trim() ||
+    "";
+  if (!CHROME_GAIA_ID_RE.test(chromeGaiaId)) {
+    return NextResponse.json(
+      { error: "Chrome profile id is required. Sign into Chrome and reopen Premium from the extension." },
+      { status: 400 },
+    );
+  }
+
+  const existing = await getPremiumPurchaseByStripeSessionId(session.id);
+  if (existing?.claimedAt) {
+    if (
+      existing.extensionId === extensionId &&
+      existing.installId === installId &&
+      existing.chromeGaiaId === chromeGaiaId
+    ) {
+      const entitlement = signPremiumEntitlement(
+        {
+          product: "orbit-premium",
+          plan: "premium",
+          installId,
+          extensionId,
+          stripeSessionId: session.id,
+          issuedAt: Date.now(),
+        },
+        entitlementSecret,
+      );
+      return NextResponse.json({ entitlement, extensionId, installId });
+    }
+    return NextResponse.json(
+      { error: "This purchase has already been claimed." },
+      { status: 409 },
+    );
+  }
+
   const entitlement = signPremiumEntitlement(
     {
       product: "orbit-premium",
@@ -95,7 +137,10 @@ export async function POST(request: Request) {
     stripeSessionId: session.id,
     extensionId,
     installId,
+    activeInstallId: installId,
+    chromeGaiaId,
     userId: webSession?.userId,
+    claimedAt: Date.now(),
     issuedAt: Date.now(),
   });
 

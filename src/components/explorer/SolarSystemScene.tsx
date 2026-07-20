@@ -16,7 +16,10 @@ import { SunLighting } from "./SunLighting";
 import { ThrustEffect } from "./ThrustEffect";
 import { MoonMesh } from "./MoonMesh";
 import { MoonOrbitRing } from "./MoonOrbitRing";
+import { IssMesh } from "./IssMesh";
+import { IssOrbitRing } from "./IssOrbitRing";
 import { IdleOrbitController } from "./IdleOrbitController";
+import { TrackableFocusController } from "./TrackableFocusController";
 import { DiscoveryAutopilotController } from "./DiscoveryAutopilotController";
 import { EarthApproachController } from "./EarthApproachController";
 import { FlightTargetSelector } from "./FlightTargetSelector";
@@ -55,12 +58,14 @@ export function SolarSystemScene() {
         <RoutePathLine />
 
         {showOrbits && <MoonOrbitRing />}
+        {showOrbits && <IssOrbitRing />}
 
         {PLANETS.map((planet) => (
           <PlanetMesh key={planet.id} config={planet} />
         ))}
 
         <MoonMesh />
+        <IssMesh />
         {multiplayerEnabled ? <RemotePlayerMarkers /> : null}
       </FloatingOrigin>
 
@@ -71,6 +76,11 @@ export function SolarSystemScene() {
         rollRef={rollRef}
       />
       <IdleOrbitController yawRef={yawRef} pitchRef={pitchRef} rollRef={rollRef} />
+      <TrackableFocusController
+        yawRef={yawRef}
+        pitchRef={pitchRef}
+        rollRef={rollRef}
+      />
       <DiscoveryAutopilotController
         yawRef={yawRef}
         pitchRef={pitchRef}

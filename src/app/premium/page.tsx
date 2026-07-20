@@ -1,9 +1,15 @@
 import { LegalFooter } from "@/components/LegalFooter";
 import { redirect } from "next/navigation";
+import {
+  CHROME_EXTENSION_ID_RE,
+  CHROME_GAIA_ID_RE,
+  UUID_RE,
+} from "@/lib/premium/validation";
 
 type PremiumPageSearchParams = Promise<{
   extensionId?: string;
   installId?: string;
+  chromeGaiaId?: string;
   canceled?: string;
 }>;
 
@@ -11,16 +17,15 @@ interface PremiumPageProps {
   searchParams: PremiumPageSearchParams;
 }
 
-const CHROME_EXTENSION_ID_RE = /^[a-p]{32}$/;
-const UUID_RE =
-  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-
 export default async function PremiumPage({ searchParams }: PremiumPageProps) {
   const params = await searchParams;
   const extensionId = params.extensionId ?? "";
   const installId = params.installId ?? "";
+  const chromeGaiaId = params.chromeGaiaId ?? "";
   const ready =
-    CHROME_EXTENSION_ID_RE.test(extensionId) && UUID_RE.test(installId);
+    CHROME_EXTENSION_ID_RE.test(extensionId) &&
+    UUID_RE.test(installId) &&
+    CHROME_GAIA_ID_RE.test(chromeGaiaId);
 
   if (!ready) {
     redirect("/extension?from=premium");
@@ -36,9 +41,8 @@ export default async function PremiumPage({ searchParams }: PremiumPageProps) {
           Unlock Premium flight mode
         </h1>
         <p className="mt-5 max-w-xl text-sm leading-7 text-zinc-400">
-          Premium is a one-time $2.99 unlock for extension flight mode. Basic
-          keeps the scenic screensaver, offline fallback, display selection, and
-          fullscreen behavior.
+          Premium is a one-time $2.99 unlock for extension flight mode, linked to
+          your signed-in Chrome profile so you can restore after reinstall.
         </p>
 
         <div className="mt-8 rounded-2xl border border-white/10 bg-white/[0.03] p-5">
@@ -63,15 +67,14 @@ export default async function PremiumPage({ searchParams }: PremiumPageProps) {
           <form action="/api/premium/checkout" method="post" className="mt-6">
             <input type="hidden" name="extensionId" value={extensionId} />
             <input type="hidden" name="installId" value={installId} />
+            <input type="hidden" name="chromeGaiaId" value={chromeGaiaId} />
             <button
               type="submit"
-              disabled={!ready}
-              className="w-full rounded-xl border border-sky-300/30 bg-sky-300 px-4 py-3 text-sm font-semibold text-slate-950 transition hover:bg-sky-200 disabled:cursor-not-allowed disabled:border-zinc-700 disabled:bg-zinc-800 disabled:text-zinc-500"
+              className="w-full rounded-xl border border-sky-300/30 bg-sky-300 px-4 py-3 text-sm font-semibold text-slate-950 transition hover:bg-sky-200"
             >
               Continue to secure checkout
             </button>
           </form>
-
         </div>
 
         <p className="mt-10 text-center text-xs text-zinc-600">

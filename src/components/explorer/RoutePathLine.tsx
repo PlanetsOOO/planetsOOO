@@ -3,24 +3,14 @@
 import { useFrame } from "@react-three/fiber";
 import { useMemo } from "react";
 import * as THREE from "three";
-import { isMoonTarget, type NavTargetId } from "@/data/navigationTargets";
-import { getPlanet } from "@/data/planets";
-import { getMoonHeliocentricPosition } from "@/lib/astronomy/moonEphemeris";
-import { getSimulationDate } from "@/lib/simulationTime";
+import type { NavTargetId } from "@/data/navigationTargets";
 import { useExplorer } from "@/context/ExplorerContext";
-import { getTargetPosition } from "@/lib/targetPositions";
+import { resolveNavTargetHeliocentric } from "@/lib/navTargetBody";
 import { RENDER_FRAME_PRIORITY } from "@/lib/renderFramePriority";
 import { StableOrbitLine } from "./StableOrbitLine";
 
 function resolveAbsolute(id: NavTargetId, target = new THREE.Vector3()): THREE.Vector3 {
-  const live = getTargetPosition(id);
-  if (live) return target.copy(live);
-  if (isMoonTarget(id)) {
-    return getMoonHeliocentricPosition(getSimulationDate(), target);
-  }
-  const config = getPlanet(id);
-  if (config.orbitRadius === 0) return target.set(0, 0, 0);
-  return target.set(config.orbitRadius, 0, 0);
+  return resolveNavTargetHeliocentric(id, target) ?? target.set(0, 0, 0);
 }
 
 export function RoutePathLine() {

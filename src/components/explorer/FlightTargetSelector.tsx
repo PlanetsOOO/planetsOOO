@@ -97,7 +97,7 @@ export function FlightTargetSelector({
       if (t !== null) hits.push({ id: planet.id, distance: t });
     }
 
-    for (const targetId of ["moon"] as const) {
+    for (const targetId of ["moon", "iss"] as const) {
       const absolute = getTargetPosition(targetId);
       if (!absolute) continue;
       absoluteToCameraSpace(absolute, bodyCenter);

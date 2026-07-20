@@ -108,6 +108,7 @@ await build({
     ...sharedBuildOptions.alias,
     three: path.join(srcDir, "lib/threeExtensionShim.ts"),
     "next/link": path.join(extensionDir, "offline-app", "nextLinkShim.tsx"),
+    "satellite.js": path.join(extensionDir, "offline-app", "satelliteStub.js"),
   },
   banner: {
     js: 'if(typeof globalThis.process=="undefined"){globalThis.process={env:{NODE_ENV:"production"}};}',

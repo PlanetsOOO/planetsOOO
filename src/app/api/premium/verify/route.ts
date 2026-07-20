@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { verifyPremiumEntitlement } from "@/lib/premium/entitlement";
+import { isPremiumEntitlementActive } from "@/lib/premium/activeEntitlement";
 
 export const runtime = "nodejs";
 
@@ -44,6 +45,13 @@ export async function POST(request: Request) {
   if (!payload) {
     return NextResponse.json(
       { ok: false, error: "Invalid entitlement." },
+      { status: 401 },
+    );
+  }
+
+  if (!(await isPremiumEntitlementActive(payload))) {
+    return NextResponse.json(
+      { ok: false, error: "Entitlement is no longer active for this install." },
       { status: 401 },
     );
   }

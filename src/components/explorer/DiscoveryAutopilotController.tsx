@@ -5,10 +5,14 @@ import { useFrame, useThree } from "@react-three/fiber";
 import * as THREE from "three";
 import { getPlanet } from "@/data/planets";
 import { unitsPerSecToKmPerSec } from "@/data/astronomy";
-import { isMoonTarget, type NavTargetId } from "@/data/navigationTargets";
+import { isIssTarget, isMoonTarget, type NavTargetId } from "@/data/navigationTargets";
+import {
+  applyIssShowcaseOrbit,
+  advanceIssShowcasePhase,
+} from "@/lib/issFocusView";
 import { getMoonHeliocentricPosition } from "@/lib/astronomy/moonEphemeris";
 import { useExplorer } from "@/context/ExplorerContext";
-import { getHeliocentricPosition } from "@/lib/astronomy/ephemeris";
+import { resolveNavTargetHeliocentric } from "@/lib/navTargetBody";
 import { orbitPositionAtPhase, type OrbitFrame } from "@/lib/bodyOrbit";
 import {
   beginDiscoveryDeparture,
@@ -69,22 +73,7 @@ const lookBlendPos = new THREE.Vector3();
 const passDir = new THREE.Vector3();
 
 function resolveBodyPosition(id: NavTargetId): THREE.Vector3 | null {
-  const live = getTargetPosition(id);
-  if (live) return live;
-  if (isMoonTarget(id)) {
-    getMoonHeliocentricPosition(getSimulationDate(), fallbackPos);
-    setTargetPosition(id, fallbackPos);
-    return fallbackPos;
-  }
-  const config = getPlanet(id);
-  getHeliocentricPosition(
-    id,
-    config.orbitRadius,
-    getSimulationDate(),
-    fallbackPos,
-  );
-  setTargetPosition(id, fallbackPos);
-  return fallbackPos;
+  return resolveNavTargetHeliocentric(id, fallbackPos);
 }
 
 function applyOrbitLookAt(
@@ -171,7 +160,18 @@ export function DiscoveryAutopilotController({
       const queuedId = routeTourState.queuedTargetId;
       const queuedPos = queuedId ? resolveBodyPosition(queuedId) : null;
 
-      applyOrbitMotion(orbitId, dt);
+      if (isIssTarget(orbitId) && currentPos) {
+        discoveryAutopilotState.planetOrbitPhase += advanceIssShowcasePhase(dt);
+        applyIssShowcaseOrbit(
+          currentPos,
+          discoveryAutopilotState.planetOrbitFrame,
+          discoveryAutopilotState.planetOrbitPhase,
+          getDiscoveryOrbitFov(),
+          viewerPosition,
+        );
+      } else {
+        applyOrbitMotion(orbitId, dt);
+      }
       applyOrbitLookAt(
         currentPos ?? viewerPosition,
         yawRef,
@@ -288,7 +288,18 @@ export function DiscoveryAutopilotController({
       : discoveryAutopilotState.queuedTargetId;
     const queuedPos = queuedId ? resolveBodyPosition(queuedId) : null;
 
-    applyOrbitMotion(orbitId, dt);
+    if (isIssTarget(orbitId) && currentPos) {
+      discoveryAutopilotState.planetOrbitPhase += advanceIssShowcasePhase(dt);
+      applyIssShowcaseOrbit(
+        currentPos,
+        discoveryAutopilotState.planetOrbitFrame,
+        discoveryAutopilotState.planetOrbitPhase,
+        getDiscoveryOrbitFov(),
+        viewerPosition,
+      );
+    } else {
+      applyOrbitMotion(orbitId, dt);
+    }
 
     setDisplaySpeedKmPerSec(0);
     setDisplayLightspeedMultiple(0);
@@ -386,6 +397,7 @@ export function DiscoveryAutopilotController({
 }
 
 function applyOrbitMotion(orbitTargetId: NavTargetId, dt: number) {
+  if (isIssTarget(orbitTargetId)) return;
   const currentPos = resolveBodyPosition(orbitTargetId);
   if (!currentPos) return;
 

@@ -14,6 +14,7 @@ import {
 import type { PlanetId } from "@/data/planets";
 import { isPlanetTarget, type NavTargetId } from "@/data/navigationTargets";
 import { markIdleOrbitUserActivity } from "@/lib/idleOrbitState";
+import { deactivateTrackableFocus } from "@/lib/trackableFocusState";
 import { resetMobileTouchState } from "@/lib/mobileTouchState";
 import {
   beginDiscoveryOrbitAtTarget,
@@ -295,6 +296,7 @@ export function ExplorerProvider({ children }: { children: ReactNode }) {
   }, [clearFlightReticleTimer, clearScenicChromeTimer]);
 
   const launchAutopilotLeg = useCallback((id: NavTargetId) => {
+    deactivateTrackableFocus();
     setNavTargetId(id);
     setAutoNavigating(true);
     if (isPlanetTarget(id)) setSelectedId(id);
@@ -513,6 +515,7 @@ export function ExplorerProvider({ children }: { children: ReactNode }) {
       cancelRoute();
       setMenuOpen(false);
       markIdleOrbitUserActivity();
+      deactivateTrackableFocus();
       beginSearchFocusAtTarget(id);
       setDiscoveryAutopilotActiveState(true);
       markScenicChromeActivity();
@@ -524,7 +527,10 @@ export function ExplorerProvider({ children }: { children: ReactNode }) {
       }
       if (isPlanetTarget(id)) setSelectedId(id);
 
-      if (typeof window !== "undefined" && isMultiplayerMode()) {
+      if (
+        typeof window !== "undefined" &&
+        isMultiplayerMode()
+      ) {
         void fetch("/api/multiplayer/progression/discovery", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -559,7 +565,7 @@ export function ExplorerProvider({ children }: { children: ReactNode }) {
         navigateToTarget(id);
         return;
       }
-      if (id === "moon") {
+      if (id === "moon" || id === "iss") {
         navigateToTarget(id);
         return;
       }

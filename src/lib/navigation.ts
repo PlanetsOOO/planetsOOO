@@ -1,7 +1,9 @@
 import type { PlanetConfig } from "@/data/planets";
 import type { NavTargetId } from "@/data/navigationTargets";
-import { isMoonTarget } from "@/data/navigationTargets";
+import { isIssTarget, isMoonTarget } from "@/data/navigationTargets";
+import { ISS, ISS_VIEW_STANDOFF_UNITS } from "@/data/iss";
 import { MOON } from "@/data/moon";
+import { placeViewerAtIssStandoff } from "@/lib/issFocusView";
 import { SUN_DISPLAY_RADIUS_SCALE } from "@/lib/astronomy/scale";
 import * as THREE from "three";
 
@@ -16,6 +18,7 @@ export const AUTO_NAV_WARP_DISTANCE = 120;
 
 const _approach = new THREE.Vector3();
 const _look = new THREE.Vector3();
+const _toBody = new THREE.Vector3();
 const _tangent = new THREE.Vector3();
 const _north = new THREE.Vector3(0, 1, 0);
 const _euler = new THREE.Euler(0, 0, 0, "YXZ");
@@ -76,11 +79,23 @@ export function getPlanetArrivalDistance(config: PlanetConfig): number {
   return Math.max(standoff * 0.12, config.radius * 0.35, 2);
 }
 
+export function getArrivalDistanceForTarget(
+  targetId: NavTargetId,
+  config: PlanetConfig,
+): number {
+  if (isIssTarget(targetId)) {
+    return Math.max(ISS_VIEW_STANDOFF_UNITS * 0.18, ISS.boundingRadius * 6);
+  }
+  return getPlanetArrivalDistance(config);
+}
+
 export function getApproachPositionForTarget(
   targetId: NavTargetId,
   bodyPos: THREE.Vector3,
   fromPos: THREE.Vector3,
   planetConfig?: PlanetConfig,
+  target = _approach,
+  viewAngles?: { yaw: number; pitch: number; roll?: number },
 ): THREE.Vector3 {
   if (isMoonTarget(targetId)) {
     return getPlanetOrbitApproachPosition(
@@ -88,6 +103,25 @@ export function getApproachPositionForTarget(
       { radius: MOON.radius } as PlanetConfig,
       fromPos,
     );
+  }
+  if (isIssTarget(targetId)) {
+    if (viewAngles) {
+      return placeViewerAtIssStandoff(
+        bodyPos,
+        viewAngles.yaw,
+        viewAngles.pitch,
+        target,
+        viewAngles.roll ?? 0,
+        ISS_VIEW_STANDOFF_UNITS,
+      );
+    }
+    _toBody.subVectors(bodyPos, fromPos);
+    if (_toBody.lengthSq() < ISS_VIEW_STANDOFF_UNITS * ISS_VIEW_STANDOFF_UNITS * 0.04) {
+      _toBody.set(ISS_VIEW_STANDOFF_UNITS, ISS.boundingRadius * 2, ISS_VIEW_STANDOFF_UNITS * 0.35);
+    } else {
+      _toBody.normalize().multiplyScalar(ISS_VIEW_STANDOFF_UNITS);
+    }
+    return target.copy(bodyPos).sub(_toBody);
   }
   if (!planetConfig) {
     throw new Error("Planet config required for planet approach");

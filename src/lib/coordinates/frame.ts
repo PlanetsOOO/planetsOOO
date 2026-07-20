@@ -1,8 +1,10 @@
 import type { PlanetId } from "@/data/planets";
 import { ASTRONOMY, AU_KM, KM_PER_UNIT } from "@/data/astronomy";
+import { ISS } from "@/data/iss";
 import { MOON } from "@/data/moon";
 import type { NavTargetId } from "@/data/navigationTargets";
-import { isMoonTarget } from "@/data/navigationTargets";
+import { isIssTarget, isMoonTarget } from "@/data/navigationTargets";
+import { getTrackableNearClipAu } from "@/lib/trackableDisplay";
 import {
   CELESTIAL_SPHERE_RADIUS,
   SUN_DISPLAY_RADIUS_SCALE,
@@ -83,8 +85,13 @@ export function moonRenderRadius(): number {
   return (MOON.radius * KM_PER_UNIT) / AU_KM;
 }
 
+export function issRenderRadius(): number {
+  return (ISS.boundingRadius * KM_PER_UNIT) / AU_KM;
+}
+
 export function navTargetRenderRadius(id: NavTargetId): number {
   if (isMoonTarget(id)) return moonRenderRadius();
+  if (isIssTarget(id)) return issRenderRadius();
   return bodyRenderRadius(id);
 }
 
@@ -95,9 +102,9 @@ export function bodyRenderRadius(bodyId: PlanetId): number {
   return (radiusKm / AU_KM) * displayScale;
 }
 
-export function getRenderClipPlanes(): { near: number; far: number } {
+export function getRenderClipPlanes(closestDistAu?: number): { near: number; far: number } {
   return {
-    near: 1e-7,
+    near: getTrackableNearClipAu(closestDistAu),
     far: 400,
   };
 }

@@ -1,10 +1,14 @@
+import { ISS_ORBIT_SHOWCASE_RADIUS, ISS_VIEW_STANDOFF_UNITS } from "@/data/iss";
 import type { NavTargetId } from "@/data/navigationTargets";
-import { isMoonTarget, NAV_TARGETS } from "@/data/navigationTargets";
+import { isIssTarget, isMoonTarget, NAV_TARGETS } from "@/data/navigationTargets";
 import type { PlanetConfig } from "@/data/planets";
 import { getPlanet } from "@/data/planets";
-import { MOON } from "@/data/moon";
-import { getHeliocentricPosition } from "@/lib/astronomy/ephemeris";
-import { getMoonHeliocentricPosition } from "@/lib/astronomy/moonEphemeris";
+import { placeViewerAtIssStandoff } from "@/lib/issFocusView";
+import {
+  resolveNavTargetHeliocentric,
+  resolveNavTargetPlanetConfig,
+  resolveNavTargetRadius,
+} from "@/lib/navTargetBody";
 import type { OrbitFrame } from "@/lib/bodyOrbit";
 import {
   captureOrbitFrame,
@@ -48,9 +52,17 @@ import {
 import { BASE_FOV } from "@/lib/lightspeed";
 import {
   clampScenicOrbitFov,
+  clampTrackableOrbitFov,
   defaultScenicOrbitFov,
   SCENIC_ORBIT_FOV_STEP,
+  TRACKABLE_ORBIT_FOV_STEP,
 } from "@/lib/scenicOrbitZoom";
+import { captureTrackableOrbitFrame } from "@/lib/trackableOrbit";
+import {
+  getTrackableFocusOrbitFov,
+  isTrackableFocusOrbitActive,
+  setTrackableFocusOrbitFov,
+} from "@/lib/trackableFocusState";
 import * as THREE from "three";
 
 export const DISCOVERY_TRANSIT_SEC = SCENIC_TRANSIT_ETA_SEC;
@@ -147,10 +159,10 @@ const _viewDir = new THREE.Vector3();
 const _toTarget = new THREE.Vector3();
 
 export function getOrbitZoneExitDistance(targetId: NavTargetId): number {
-  if (isMoonTarget(targetId)) {
-    return orbitZoneMax(MOON.radius) * 1.05;
+  if (isIssTarget(targetId)) {
+    return ISS_VIEW_STANDOFF_UNITS * 4;
   }
-  return orbitZoneMax(getPlanet(targetId).radius) * 1.05;
+  return orbitZoneMax(resolveNavTargetRadius(targetId)) * 1.05;
 }
 
 export function isOutsideOrbitZone(
@@ -206,11 +218,29 @@ export function resetDiscoveryOrbitFov(): void {
 
 /** ArrowUp zooms in, ArrowDown zooms out during scenic orbit. */
 export function nudgeScenicOrbitFov(zoom: "in" | "out"): void {
-  if (discoveryAutopilotState.phase !== "orbit") return;
-  const delta = zoom === "in" ? -SCENIC_ORBIT_FOV_STEP : SCENIC_ORBIT_FOV_STEP;
-  discoveryAutopilotState.orbitFov = clampScenicOrbitFov(
-    discoveryAutopilotState.orbitFov + delta,
-  );
+  const inDiscoveryOrbit = discoveryAutopilotState.phase === "orbit";
+  const inTrackableFocus = isTrackableFocusOrbitActive();
+  if (!inDiscoveryOrbit && !inTrackableFocus) return;
+
+  const targetId = inDiscoveryOrbit
+    ? discoveryAutopilotState.currentTargetId
+    : null;
+  const trackable =
+    inTrackableFocus || (targetId !== null && isIssTarget(targetId));
+  const step = trackable ? TRACKABLE_ORBIT_FOV_STEP : SCENIC_ORBIT_FOV_STEP;
+  const delta = zoom === "in" ? -step : step;
+  const clamp = trackable ? clampTrackableOrbitFov : clampScenicOrbitFov;
+
+  if (inDiscoveryOrbit) {
+    discoveryAutopilotState.orbitFov = clamp(
+      discoveryAutopilotState.orbitFov + delta,
+    );
+  }
+  if (inTrackableFocus) {
+    setTrackableFocusOrbitFov(
+      clamp(getTrackableFocusOrbitFov() + delta),
+    );
+  }
 }
 
 export function getDiscoveryOrbitFov(): number {
@@ -615,34 +645,21 @@ export function beginSearchFocusAtTarget(targetId: NavTargetId, now = Date.now()
   discoveryAutopilotState.currentTargetId = targetId;
   discoveryAutopilotState.queuedTargetId = null;
 
-  let bodyPos = getTargetPosition(targetId);
-  if (!bodyPos && isMoonTarget(targetId)) {
-    getMoonHeliocentricPosition(getSimulationDate(), _approach);
-    setTargetPosition(targetId, _approach);
-    bodyPos = _approach;
-  }
-  if (!bodyPos && !isMoonTarget(targetId)) {
-    const config = getPlanet(targetId);
-    getHeliocentricPosition(
-      targetId,
-      config.orbitRadius,
-      getSimulationDate(),
-      _approach,
-    );
-    setTargetPosition(targetId, _approach);
-    bodyPos = _approach;
-  }
+  let bodyPos = resolveNavTargetHeliocentric(targetId, _approach);
   if (!bodyPos) {
     resetDiscoveryAutopilotState();
     return;
   }
 
-  const planetConfig = isMoonTarget(targetId)
-    ? ({ radius: MOON.radius } as PlanetConfig)
-    : getPlanet(targetId);
+  const planetConfig = resolveNavTargetPlanetConfig(targetId);
   const dist = distanceToBodyCenter(viewerPosition, bodyPos);
 
-  if (isWithinOrbitZone(dist, planetConfig.radius)) {
+  if (isIssTarget(targetId)) {
+    if (dist <= ISS_VIEW_STANDOFF_UNITS * 1.5) {
+      beginDiscoveryOrbitAtTarget(targetId, now);
+      return;
+    }
+  } else if (isWithinOrbitZone(dist, planetConfig.radius)) {
     beginDiscoveryOrbitAtTarget(targetId, now);
     return;
   }
@@ -666,29 +683,10 @@ export function beginSearchFocusAtTarget(targetId: NavTargetId, now = Date.now()
 export function beginDiscoveryOrbitAtTarget(targetId: NavTargetId, now = Date.now()): void {
   resetDiscoveryLegLock();
 
-  let bodyPos = getTargetPosition(targetId);
-  if (!bodyPos && isMoonTarget(targetId)) {
-    getMoonHeliocentricPosition(getSimulationDate(), _approach);
-    setTargetPosition(targetId, _approach);
-    bodyPos = _approach;
-  }
-  if (!bodyPos && !isMoonTarget(targetId)) {
-    const config = getPlanet(targetId);
-    getHeliocentricPosition(
-      targetId,
-      config.orbitRadius,
-      getSimulationDate(),
-      _approach,
-    );
-    setTargetPosition(targetId, _approach);
-    bodyPos = _approach;
-  }
-
+  let bodyPos = resolveNavTargetHeliocentric(targetId, _approach);
   if (!bodyPos) return;
 
-  const planetConfig = isMoonTarget(targetId)
-    ? ({ radius: MOON.radius } as PlanetConfig)
-    : getPlanet(targetId);
+  const planetConfig = resolveNavTargetPlanetConfig(targetId);
   const approach = getApproachPositionForTarget(
     targetId,
     bodyPos,
@@ -713,12 +711,21 @@ export function beginDiscoveryOrbitAtTarget(targetId: NavTargetId, now = Date.no
     queueNextDiscoveryTarget();
   }
 
-  captureOrbitFrame(
-    viewerPosition,
-    bodyPos,
-    planetConfig.radius,
-    discoveryAutopilotState.planetOrbitFrame,
-  );
+  if (isIssTarget(targetId)) {
+    captureTrackableOrbitFrame(
+      viewerPosition,
+      bodyPos,
+      ISS_ORBIT_SHOWCASE_RADIUS,
+      discoveryAutopilotState.planetOrbitFrame,
+    );
+  } else {
+    captureOrbitFrame(
+      viewerPosition,
+      bodyPos,
+      planetConfig.radius,
+      discoveryAutopilotState.planetOrbitFrame,
+    );
+  }
   captureDiscoveryPlanetOrbit(discoveryAutopilotState.planetOrbitFrame, 0);
 
   discoveryAutopilotState.orbitStartPhase = getDiscoveryOrbitPhase(targetId);
@@ -768,11 +775,28 @@ export function getDiscoveryDesiredPosition(
   fromPos: THREE.Vector3,
   planetConfig?: PlanetConfig,
   target = _desired,
+  viewAngles?: { yaw: number; pitch: number; roll?: number },
 ): THREE.Vector3 {
+  if (isIssTarget(targetId) && viewAngles) {
+    return placeViewerAtIssStandoff(
+      bodyPos,
+      viewAngles.yaw,
+      viewAngles.pitch,
+      target,
+      viewAngles.roll ?? 0,
+    );
+  }
   if (discoveryAutopilotState.approachLocked) {
     return target.copy(bodyPos).add(discoveryAutopilotState.lockedApproachOffset);
   }
-  return getApproachPositionForTarget(targetId, bodyPos, fromPos, planetConfig);
+  return getApproachPositionForTarget(
+    targetId,
+    bodyPos,
+    fromPos,
+    planetConfig,
+    target,
+    viewAngles,
+  );
 }
 
 /** @deprecated use getDiscoveryDesiredPosition */
@@ -787,8 +811,11 @@ export function getDiscoveryStandoffUnits(
   targetId: NavTargetId,
   planetConfig?: PlanetConfig,
 ): number {
+  if (isIssTarget(targetId)) {
+    return ISS_VIEW_STANDOFF_UNITS;
+  }
   if (isMoonTarget(targetId)) {
-    return getOrbitStandoffUnits({ radius: MOON.radius } as PlanetConfig);
+    return getOrbitStandoffUnits(resolveNavTargetPlanetConfig(targetId));
   }
   if (!planetConfig) return 2;
   return getOrbitStandoffUnits(planetConfig);
@@ -862,16 +889,24 @@ export function beginDiscoveryOrbitPhase(): void {
   if (targetId) {
     const bodyPos = getTargetPosition(targetId);
     if (bodyPos) {
-      const radius = isMoonTarget(targetId)
-        ? MOON.radius
-        : getPlanet(targetId).radius;
-      captureOrbitFrame(
-        viewerPosition,
-        bodyPos,
-        radius,
-        discoveryAutopilotState.planetOrbitFrame,
-      );
-      captureDiscoveryPlanetOrbit(discoveryAutopilotState.planetOrbitFrame, 0);
+      if (isIssTarget(targetId)) {
+        captureTrackableOrbitFrame(
+          viewerPosition,
+          bodyPos,
+          ISS_ORBIT_SHOWCASE_RADIUS,
+          discoveryAutopilotState.planetOrbitFrame,
+        );
+        captureDiscoveryPlanetOrbit(discoveryAutopilotState.planetOrbitFrame, 0);
+      } else {
+        const radius = resolveNavTargetRadius(targetId);
+        captureOrbitFrame(
+          viewerPosition,
+          bodyPos,
+          radius,
+          discoveryAutopilotState.planetOrbitFrame,
+        );
+        captureDiscoveryPlanetOrbit(discoveryAutopilotState.planetOrbitFrame, 0);
+      }
     }
   }
 

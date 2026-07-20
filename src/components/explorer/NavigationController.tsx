@@ -4,11 +4,15 @@ import { useRef, useEffect } from "react";
 import { useFrame, useThree } from "@react-three/fiber";
 import * as THREE from "three";
 import { unitsPerSecToKmPerSec } from "@/data/astronomy";
-import { isMoonTarget, type NavTargetId } from "@/data/navigationTargets";
-import { MOON } from "@/data/moon";
-import { getMoonHeliocentricPosition } from "@/lib/astronomy/moonEphemeris";
-import { getPlanet } from "@/data/planets";
+import { ISS_ORBIT_SHOWCASE_RADIUS } from "@/data/iss";
+import { isIssTarget, isMoonTarget, type NavTargetId } from "@/data/navigationTargets";
+import { maintainIssFocusStandoff } from "@/lib/issFocusView";
+import { captureTrackableOrbitFrame } from "@/lib/trackableOrbit";
+import {
+  activateTrackableFocus,
+} from "@/lib/trackableFocusState";
 import { useExplorer } from "@/context/ExplorerContext";
+import { resolveNavTargetHeliocentric, resolveNavTargetPlanetConfig, resolveNavTargetRadius } from "@/lib/navTargetBody";
 import {
   applyAutopilotThrust,
   BASE_MAX_SPEED,
@@ -33,8 +37,12 @@ import {
   applyCameraAngles,
   AUTO_NAV_WARP_DISTANCE,
   getApproachPositionForTarget,
-  getPlanetArrivalDistance,
+  getArrivalDistanceForTarget,
 } from "@/lib/navigation";
+import {
+  resolveIssFocusActive,
+  syncIssFocusLock,
+} from "@/lib/issFocusLock";
 import {
   resolveMoonFocusActive,
   syncMoonFocusLock,
@@ -77,19 +85,8 @@ const fallbackPos = new THREE.Vector3();
 function resolveTargetPosition(navTargetId: NavTargetId) {
   const live = getTargetPosition(navTargetId);
   if (live) return live;
-  if (isMoonTarget(navTargetId)) {
-    getMoonHeliocentricPosition(getSimulationDate(), fallbackPos);
-    setTargetPosition(navTargetId, fallbackPos);
-    return fallbackPos;
-  }
-  const config = getPlanet(navTargetId);
-  getHeliocentricPosition(
-    navTargetId,
-    config.orbitRadius,
-    getSimulationDate(),
-    fallbackPos,
-  );
-  setTargetPosition(navTargetId, fallbackPos);
+  const resolved = resolveNavTargetHeliocentric(navTargetId, fallbackPos);
+  if (resolved) return resolved;
   return fallbackPos;
 }
 
@@ -139,6 +136,10 @@ export function NavigationController({
       resolveMoonFocusActive({ navTargetId, autoNavigating, routeActive }),
       getSimulationDate(),
     );
+    syncIssFocusLock(
+      resolveIssFocusActive({ navTargetId, autoNavigating, routeActive }),
+      getSimulationDate(),
+    );
 
     if (!autoNavigating || !navTargetId) {
       return;
@@ -168,10 +169,8 @@ export function NavigationController({
       return;
     }
 
-    const planetConfig = isMoonTarget(navTargetId)
-      ? ({ radius: MOON.radius } as ReturnType<typeof getPlanet>)
-      : getPlanet(navTargetId);
-    const arrivalDist = getPlanetArrivalDistance(planetConfig);
+    const planetConfig = resolveNavTargetPlanetConfig(navTargetId);
+    const arrivalDist = getArrivalDistanceForTarget(navTargetId, planetConfig);
     const standoffUnits = getDiscoveryStandoffUnits(navTargetId, planetConfig);
 
     const discoveryTransit =
@@ -216,6 +215,12 @@ export function NavigationController({
             absolutePos,
             viewerPosition,
             planetConfig,
+            desiredPos.current,
+            {
+              yaw: yawRef.current,
+              pitch: pitchRef.current,
+              roll: rollRef.current,
+            },
           )
         : routeTransit
           ? getRouteDesiredPosition(
@@ -229,6 +234,12 @@ export function NavigationController({
               absolutePos,
               viewerPosition,
               planetConfig,
+              desiredPos.current,
+              {
+                yaw: yawRef.current,
+                pitch: pitchRef.current,
+                roll: rollRef.current,
+              },
             ),
     );
 
@@ -322,6 +333,18 @@ export function NavigationController({
         1.35 + transitProgress * 0.5 - approachProgress * 1.2,
       );
 
+      if (isIssTarget(navTargetId)) {
+        maintainIssFocusStandoff(
+          absolutePos,
+          viewerPosition,
+          yawRef.current,
+          pitchRef.current,
+          rollRef.current,
+          undefined,
+          inApproachZone ? 0.22 : 0,
+        );
+      }
+
       const intensity = Math.min(
         1,
         multiple / SCENIC_MAX_LIGHTSPEED_MULTIPLIER,
@@ -389,6 +412,15 @@ export function NavigationController({
           return;
         }
         viewerPosition.copy(desiredPos.current);
+        if (isIssTarget(navTargetId)) {
+          maintainIssFocusStandoff(
+            absolutePos,
+            viewerPosition,
+            yawRef.current,
+            pitchRef.current,
+            rollRef.current,
+          );
+        }
         velocity.current.set(0, 0, 0);
         flightRef.current.velocity.set(0, 0, 0);
         flightRef.current.speed = 0;
@@ -406,28 +438,39 @@ export function NavigationController({
         }
 
         if (routeActive && navTargetId) {
-          if (isMoonTarget(navTargetId)) {
-            captureOrbitFrame(
+          if (isIssTarget(navTargetId)) {
+            captureTrackableOrbitFrame(
               viewerPosition,
               absolutePos,
-              MOON.radius,
+              ISS_ORBIT_SHOWCASE_RADIUS,
               idleOrbitState.frame,
             );
-            captureDiscoveryPlanetOrbit(idleOrbitState.frame, 0);
           } else {
-            const arrivedPlanet = getPlanet(navTargetId);
             captureOrbitFrame(
               viewerPosition,
               absolutePos,
-              arrivedPlanet.radius,
+              resolveNavTargetRadius(navTargetId),
               idleOrbitState.frame,
             );
-            captureDiscoveryPlanetOrbit(idleOrbitState.frame, 0);
           }
+          captureDiscoveryPlanetOrbit(idleOrbitState.frame, 0);
           beginRouteObserve(
             navTargetId,
             routeWaypoints[routeLegIndex + 1] ?? null,
           );
+          endAutopilotTransit();
+          return;
+        }
+
+        if (isIssTarget(navTargetId)) {
+          captureTrackableOrbitFrame(
+            viewerPosition,
+            absolutePos,
+            ISS_ORBIT_SHOWCASE_RADIUS,
+            idleOrbitState.frame,
+          );
+          activateTrackableFocus(navTargetId, idleOrbitState.frame, 0);
+          idleOrbitState.active = false;
           endAutopilotTransit();
           return;
         }
@@ -556,27 +599,31 @@ export function NavigationController({
       setDisplayLightspeedMultiple(0);
 
       if (!routeActive && navTargetId) {
-        if (isMoonTarget(navTargetId)) {
-          captureOrbitFrame(
+        if (isIssTarget(navTargetId)) {
+          captureTrackableOrbitFrame(
             viewerPosition,
             absolutePos,
-            MOON.radius,
+            ISS_ORBIT_SHOWCASE_RADIUS,
             idleOrbitState.frame,
           );
           idleOrbitState.phase = 0;
-          captureDiscoveryPlanetOrbit(idleOrbitState.frame, 0);
+          activateTrackableFocus(navTargetId, idleOrbitState.frame, 0);
+          idleOrbitState.active = false;
         } else {
-          const arrived = getPlanet(navTargetId);
           captureOrbitFrame(
             viewerPosition,
             absolutePos,
-            arrived.radius,
+            resolveNavTargetRadius(navTargetId),
             idleOrbitState.frame,
           );
           idleOrbitState.phase = 0;
-          activateIdleOrbit(navTargetId);
-          idleOrbitState.active = true;
           captureDiscoveryPlanetOrbit(idleOrbitState.frame, 0);
+          if (!isMoonTarget(navTargetId)) {
+            activateIdleOrbit(navTargetId);
+            idleOrbitState.active = true;
+          } else {
+            idleOrbitState.active = false;
+          }
         }
       }
 

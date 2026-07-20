@@ -120,6 +120,21 @@ form {
   text-decoration: underline;
 }
 
+.premium-status {
+  margin: 0.15rem 0 0;
+  color: #86efac;
+  font-size: 0.66rem;
+  line-height: 1.35;
+}
+
+.premium-status.is-warn {
+  color: #fcd34d;
+}
+
+.premium-status.is-muted {
+  color: #71717a;
+}
+
 .account-notice {
   margin: -0.1rem 0 0;
   color: #a1a1aa;

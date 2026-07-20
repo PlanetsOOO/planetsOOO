@@ -1,0 +1,7 @@
+# Keep production deploys lean (site only). Extension packages ship separately.
+extension/
+dist/
+scripts/.pydeps/
+data/
+*.zip
+.cursor/
