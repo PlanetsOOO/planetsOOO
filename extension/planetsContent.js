@@ -173,105 +173,115 @@ function setSpeedTrackerVisible(visible, detail) {
 if (isScreensaverPage()) {
   notifyScreensaverReady();
 
+  // Register dismiss listeners immediately using URL params / defaults.
+  // Do not wait on chrome.storage.sync — a slow/failed get left Basic idle
+  // with only the page-side close path, which used to throw without extId.
+  const keyState = {
+    flightKey: configuredFlightKey(DEFAULTS),
+    exitKey: configuredExitKey(DEFAULTS, configuredFlightKey(DEFAULTS)),
+  };
+  const canUseFlight = flightEnabled();
+  let flightMode = false;
+
   chrome.storage.sync.get(DEFAULTS, (settings) => {
-    const flightKey = configuredFlightKey(settings);
-    const exitKey = configuredExitKey(settings, flightKey);
-    const canUseFlight = flightEnabled();
-    let flightMode = false;
+    keyState.flightKey = configuredFlightKey(settings);
+    keyState.exitKey = configuredExitKey(settings, keyState.flightKey);
+  });
 
-    window.addEventListener("orbit-screensaver-flight-mode", (event) => {
-      flightMode = Boolean(event.detail?.active);
-      if (flightMode) {
-        notifyFlightModeEntered();
-      } else {
-        notifyFlightModeExited();
-      }
-      setSpeedTrackerVisible(
-        flightMode,
-        flightMode ? DEFAULT_SPEED_TRACKER_DETAIL : undefined,
-      );
-    });
+  window.addEventListener("orbit-screensaver-flight-mode", (event) => {
+    flightMode = Boolean(event.detail?.active);
+    if (flightMode) {
+      notifyFlightModeEntered();
+    } else {
+      notifyFlightModeExited();
+    }
+    setSpeedTrackerVisible(
+      flightMode,
+      flightMode ? DEFAULT_SPEED_TRACKER_DETAIL : undefined,
+    );
+  });
 
-    window.addEventListener("orbit-screensaver-speed", (event) => {
-      const active = Boolean(event.detail?.active);
-      if (!flightMode || !active) {
-        setSpeedTrackerVisible(false);
+  window.addEventListener("orbit-screensaver-speed", (event) => {
+    const active = Boolean(event.detail?.active);
+    if (!flightMode || !active) {
+      setSpeedTrackerVisible(false);
+      return;
+    }
+    setSpeedTrackerVisible(true, event.detail);
+  });
+
+  window.addEventListener(
+    "keydown",
+    (event) => {
+      const modified = event.metaKey || event.ctrlKey || event.altKey;
+      const flightKey = keyState.flightKey;
+      const exitKey = keyState.exitKey;
+
+      if (
+        event.key?.toLowerCase() === "l" &&
+        !modified &&
+        (flightMode || (canUseFlight && event.code === flightKey))
+      ) {
         return;
       }
-      setSpeedTrackerVisible(true, event.detail);
-    });
 
-    window.addEventListener(
-      "keydown",
-      (event) => {
-        const modified = event.metaKey || event.ctrlKey || event.altKey;
+      if (canUseFlight && !flightMode && event.code === flightKey && !modified) {
+        flightMode = true;
+        notifyFlightModeEntered();
+        setSpeedTrackerVisible(true, DEFAULT_SPEED_TRACKER_DETAIL);
+        return;
+      }
 
-        if (
-          event.key?.toLowerCase() === "l" &&
-          !modified &&
-          (flightMode || (canUseFlight && event.code === flightKey))
-        ) {
+      if (flightMode) {
+        if (event.code === exitKey && !modified) {
           return;
         }
+        return;
+      }
 
-        if (canUseFlight && !flightMode && event.code === flightKey && !modified) {
-          flightMode = true;
-          notifyFlightModeEntered();
-          setSpeedTrackerVisible(true, DEFAULT_SPEED_TRACKER_DETAIL);
-          return;
-        }
-
-        if (flightMode) {
-          if (event.code === exitKey && !modified) {
-            return;
-          }
-          return;
-        }
-
-        event.preventDefault();
-        event.stopImmediatePropagation();
-        closeScreensaver();
-      },
-      true,
-    );
-
-    const closeOnPointer = (event) => {
-      if (flightMode) return;
       event.preventDefault();
       event.stopImmediatePropagation();
       closeScreensaver();
-    };
+    },
+    true,
+  );
 
-    const closeOnMeaningfulMouseMove = (event) => {
-      if (flightMode) return;
-      const movement =
-        Math.abs(event.movementX || 0) + Math.abs(event.movementY || 0);
-      if (movement < POINTER_NOISE_EPSILON) return;
-      event.preventDefault();
-      event.stopImmediatePropagation();
-      closeScreensaver();
-    };
+  const closeOnPointer = (event) => {
+    if (flightMode) return;
+    event.preventDefault();
+    event.stopImmediatePropagation();
+    closeScreensaver();
+  };
 
-    const closeOnMeaningfulWheel = (event) => {
-      if (flightMode) return;
-      const movement =
-        Math.abs(event.deltaX || 0) +
-        Math.abs(event.deltaY || 0) +
-        Math.abs(event.deltaZ || 0);
-      if (movement < WHEEL_NOISE_EPSILON) return;
-      event.preventDefault();
-      event.stopImmediatePropagation();
-      closeScreensaver();
-    };
+  const closeOnMeaningfulMouseMove = (event) => {
+    if (flightMode) return;
+    const movement =
+      Math.abs(event.movementX || 0) + Math.abs(event.movementY || 0);
+    if (movement < POINTER_NOISE_EPSILON) return;
+    event.preventDefault();
+    event.stopImmediatePropagation();
+    closeScreensaver();
+  };
 
-    window.addEventListener("pointerdown", closeOnPointer, true);
-    window.addEventListener("mousedown", closeOnPointer, true);
-    window.addEventListener("click", closeOnPointer, true);
-    window.addEventListener("contextmenu", closeOnPointer, true);
-    window.addEventListener("mousemove", closeOnMeaningfulMouseMove, true);
-    window.addEventListener("wheel", closeOnMeaningfulWheel, {
-      capture: true,
-      passive: false,
-    });
+  const closeOnMeaningfulWheel = (event) => {
+    if (flightMode) return;
+    const movement =
+      Math.abs(event.deltaX || 0) +
+      Math.abs(event.deltaY || 0) +
+      Math.abs(event.deltaZ || 0);
+    if (movement < WHEEL_NOISE_EPSILON) return;
+    event.preventDefault();
+    event.stopImmediatePropagation();
+    closeScreensaver();
+  };
+
+  window.addEventListener("pointerdown", closeOnPointer, true);
+  window.addEventListener("mousedown", closeOnPointer, true);
+  window.addEventListener("click", closeOnPointer, true);
+  window.addEventListener("contextmenu", closeOnPointer, true);
+  window.addEventListener("mousemove", closeOnMeaningfulMouseMove, true);
+  window.addEventListener("wheel", closeOnMeaningfulWheel, {
+    capture: true,
+    passive: false,
   });
 }

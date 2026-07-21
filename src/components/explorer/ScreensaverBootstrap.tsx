@@ -9,7 +9,7 @@ import {
   markExtensionFlightShellExited,
 } from "@/lib/discoveryAutopilot";
 import { idleOrbitState } from "@/lib/idleOrbitState";
-import { readScreensaverConfig, isExtensionPackaged } from "@/lib/screensaverConfig";
+import { readScreensaverConfig, isExtensionPackaged, sendScreensaverExtensionMessage } from "@/lib/screensaverConfig";
 import { activateScreensaverPresentation } from "@/lib/screensaverPresentation";
 import { activateScreensaverScenicTour } from "@/lib/screensaverScenic";
 import { useScreensaverMode } from "@/hooks/useScreensaverMode";
@@ -18,17 +18,6 @@ import { viewerPosition } from "@/lib/viewerState";
 const FLIGHT_IDLE_RETURN_MS = 15_000;
 const FLIGHT_IDLE_MOUSE_EPSILON = 2;
 const FLIGHT_IDLE_WHEEL_EPSILON = 1;
-
-type ChromeRuntimeLike = {
-  runtime?: {
-    sendMessage?: (message: unknown) => void;
-  };
-};
-
-function getChromeRuntime(): ChromeRuntimeLike["runtime"] | undefined {
-  return (globalThis as typeof globalThis & { chrome?: ChromeRuntimeLike }).chrome
-    ?.runtime;
-}
 
 function notifyScreensaverFlightMode(active: boolean): void {
   window.dispatchEvent(
@@ -248,7 +237,7 @@ export function ScreensaverBootstrap() {
       if (document.fullscreenElement) {
         void document.exitFullscreen?.().catch(() => {});
       }
-      getChromeRuntime()?.sendMessage?.({ type: "close" });
+      sendScreensaverExtensionMessage({ type: "close" });
       window.close();
     };
 

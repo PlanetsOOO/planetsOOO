@@ -1,3 +1,5 @@
+import { CHROME_EXTENSION_ID } from "@/lib/chromeWebStore";
+
 export interface ScreensaverConfig {
   active: boolean;
   /** Extension capability gate: basic mode disables flight entry. */
@@ -46,6 +48,16 @@ export function isMultiplayerMode(): boolean {
   return value === "1" || value === "true";
 }
 
+/**
+ * Orbit Online PC demo / subscription mode (?online=1).
+ * Separate from Basic explorer and from legacy ?multiplayer=1.
+ */
+export function isOnlineMode(): boolean {
+  if (typeof window === "undefined") return false;
+  const value = new URLSearchParams(window.location.search).get("online");
+  return value === "1" || value === "true";
+}
+
 /** Full explorer UI (HUD, menu, panels) — web app, or packaged Premium extension. */
 export function showExplorerChrome(): boolean {
   return !isScreensaverMode() || isExtensionPackaged();
@@ -88,3 +100,54 @@ export const SCREENSAVER_FLIGHT_KEY_OPTIONS = [
   { code: "Digit9", label: "9" },
   { code: "F12", label: "F12" },
 ] as const;
+
+type ChromeRuntimeSendMessage = {
+  id?: string;
+  lastError?: { message?: string };
+  sendMessage?: (...args: unknown[]) => void;
+};
+
+function chromeRuntime(): ChromeRuntimeSendMessage | null {
+  if (typeof globalThis === "undefined") return null;
+  const candidate = globalThis as typeof globalThis & {
+    chrome?: { runtime?: ChromeRuntimeSendMessage };
+  };
+  return candidate.chrome?.runtime ?? null;
+}
+
+/**
+ * Extension id for messaging from the hosted screensaver page.
+ * Prefer ?extId= (set by the extension when opening the tab); fall back to
+ * chrome.runtime.id on chrome-extension:// pages, then the published store id.
+ */
+export function resolveScreensaverExtensionId(): string {
+  if (typeof window === "undefined") return "";
+  const fromQuery = new URLSearchParams(window.location.search)
+    .get("extId")
+    ?.trim();
+  if (fromQuery) return fromQuery;
+  const runtimeId = chromeRuntime()?.id?.trim();
+  if (runtimeId) return runtimeId;
+  // Published Orbit Screensaver (dev unpacked ids differ; prefer ?extId=).
+  return CHROME_EXTENSION_ID;
+}
+
+/**
+ * Notify the extension service worker. Hosted pages (externally_connectable)
+ * must pass the extension id; extension pages use the implicit id.
+ */
+export function sendScreensaverExtensionMessage(message: unknown): void {
+  const runtime = chromeRuntime();
+  if (!runtime?.sendMessage) return;
+  try {
+    if (isExtensionPackaged()) {
+      runtime.sendMessage(message);
+      return;
+    }
+    const extensionId = resolveScreensaverExtensionId();
+    if (!extensionId) return;
+    runtime.sendMessage(extensionId, message);
+  } catch {
+    // Page may lack externally_connectable access, or the extension reloaded.
+  }
+}

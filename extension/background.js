@@ -595,6 +595,8 @@ function buildPlanetsUrl(settings) {
     url.searchParams.set("flight", isPremiumPlan(settings) ? "1" : "0");
     url.searchParams.set("flightKey", settings.flightKey || DEFAULTS.flightKey);
     url.searchParams.set("exitKey", settings.exitKey || settings.flightKey || DEFAULTS.exitKey);
+    // Hosted page must pass this to chrome.runtime.sendMessage (externally_connectable).
+    url.searchParams.set("extId", chrome.runtime.id);
     return url.toString();
   } catch {
     const url = new URL(DEFAULTS.siteUrl);
@@ -602,6 +604,7 @@ function buildPlanetsUrl(settings) {
     url.searchParams.set("flight", "0");
     url.searchParams.set("flightKey", DEFAULTS.flightKey);
     url.searchParams.set("exitKey", DEFAULTS.exitKey);
+    url.searchParams.set("extId", chrome.runtime.id);
     return url.toString();
   }
 }
