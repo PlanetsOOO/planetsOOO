@@ -1,8 +1,9 @@
 # Keep production deploys lean (site only). Extension packages ship separately.
-extension/
-dist/
+# IMPORTANT: always root-anchor directory names that also appear under src/
+# (bare "extension/" or "data/" also strips src/app/extension and src/data).
+/extension/
+/dist/
 scripts/.pydeps/
-# Root data/ only — do not use bare "data/" or it also strips src/data/.
 /data/
 *.zip
 .cursor/
