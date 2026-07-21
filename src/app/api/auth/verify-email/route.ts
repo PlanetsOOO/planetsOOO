@@ -3,9 +3,8 @@ import {
   SESSION_COOKIE,
   signSessionToken,
 } from "@/lib/auth/session";
-import { verificationMatches } from "@/lib/auth/emailVerification";
-import { findUserByVerifyToken } from "@/lib/auth/findUserByVerifyToken";
-import { updateUser } from "@/lib/entitlements/store";
+import { verifyEmailVerifyToken } from "@/lib/auth/emailVerification";
+import { getUserById, updateUser } from "@/lib/entitlements/store";
 
 export const runtime = "nodejs";
 
@@ -15,12 +14,33 @@ async function completeVerification(token: string) {
     return { error: "Missing verification token.", status: 400 as const };
   }
 
-  const user = await findUserByVerifyToken(trimmed);
-  if (!user || !verificationMatches(user, trimmed)) {
+  const payload = verifyEmailVerifyToken(trimmed);
+  if (!payload) {
     return {
       error: "Invalid or expired verification link.",
       status: 400 as const,
     };
+  }
+
+  const user = await getUserById(payload.userId);
+  if (!user || user.email.trim().toLowerCase() !== payload.email) {
+    return {
+      error:
+        "This verification link is valid, but the account could not be found. Please sign up again (accounts need durable storage on Vercel — see SERVICES.txt / BLOB_READ_WRITE_TOKEN).",
+      status: 400 as const,
+    };
+  }
+
+  if (
+    typeof user.emailVerifiedAt === "number" &&
+    user.emailVerifiedAt > 0
+  ) {
+    const session = signSessionToken({
+      kind: "user-session",
+      userId: user.id,
+      email: user.email,
+    });
+    return { user, session, status: 200 as const, alreadyVerified: true };
   }
 
   const updated = await updateUser(user.id, {

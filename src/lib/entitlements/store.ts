@@ -1,5 +1,6 @@
 import fs from "node:fs/promises";
 import path from "node:path";
+import { get as blobGet, put as blobPut } from "@vercel/blob";
 import type {
   EntitlementDatabase,
   ExtensionLinkRecord,
@@ -20,7 +21,17 @@ const EMPTY_DB: EntitlementDatabase = {
   onlineProfiles: {},
 };
 
+const BLOB_PATHNAME = "planets-ooo/entitlements.json";
+
 let writeChain: Promise<void> = Promise.resolve();
+
+function blobToken(): string | undefined {
+  return process.env.BLOB_READ_WRITE_TOKEN?.trim() || undefined;
+}
+
+function usesBlobStore(): boolean {
+  return Boolean(blobToken());
+}
 
 function dataFilePath(): string {
   const configured = process.env.ENTITLEMENT_DATA_PATH?.trim();
@@ -32,25 +43,68 @@ function dataFilePath(): string {
   return path.join(process.cwd(), "data", "entitlements.json");
 }
 
+function normalizeDb(parsed: EntitlementDatabase): EntitlementDatabase {
+  return {
+    users: parsed.users ?? {},
+    premiumPurchases: parsed.premiumPurchases ?? {},
+    subscriptions: parsed.subscriptions ?? {},
+    extensionLinks: parsed.extensionLinks ?? {},
+    progression: parsed.progression ?? {},
+    onlineProfiles: parsed.onlineProfiles ?? {},
+  };
+}
+
+async function readDbFromBlob(): Promise<EntitlementDatabase> {
+  const token = blobToken();
+  if (!token) return structuredClone(EMPTY_DB);
+  try {
+    const result = await blobGet(BLOB_PATHNAME, {
+      access: "private",
+      token,
+      useCache: false,
+    });
+    if (!result?.stream) return structuredClone(EMPTY_DB);
+    const raw = await new Response(result.stream).text();
+    if (!raw.trim()) return structuredClone(EMPTY_DB);
+    return normalizeDb(JSON.parse(raw) as EntitlementDatabase);
+  } catch {
+    return structuredClone(EMPTY_DB);
+  }
+}
+
+async function writeDbToBlob(db: EntitlementDatabase): Promise<void> {
+  const token = blobToken();
+  if (!token) {
+    throw new Error("BLOB_READ_WRITE_TOKEN is not configured");
+  }
+  await blobPut(BLOB_PATHNAME, JSON.stringify(db, null, 2), {
+    access: "private",
+    addRandomSuffix: false,
+    allowOverwrite: true,
+    contentType: "application/json",
+    token,
+  });
+}
+
 async function readDb(): Promise<EntitlementDatabase> {
+  if (usesBlobStore()) {
+    return readDbFromBlob();
+  }
   const filePath = dataFilePath();
   try {
     const raw = await fs.readFile(filePath, "utf8");
     const parsed = JSON.parse(raw) as EntitlementDatabase;
-    return {
-      users: parsed.users ?? {},
-      premiumPurchases: parsed.premiumPurchases ?? {},
-      subscriptions: parsed.subscriptions ?? {},
-      extensionLinks: parsed.extensionLinks ?? {},
-      progression: parsed.progression ?? {},
-      onlineProfiles: parsed.onlineProfiles ?? {},
-    };
+    return normalizeDb(parsed);
   } catch {
     return structuredClone(EMPTY_DB);
   }
 }
 
 async function writeDb(db: EntitlementDatabase): Promise<void> {
+  if (usesBlobStore()) {
+    await writeDbToBlob(db);
+    return;
+  }
   const filePath = dataFilePath();
   await fs.mkdir(path.dirname(filePath), { recursive: true });
   await fs.writeFile(filePath, JSON.stringify(db, null, 2), "utf8");

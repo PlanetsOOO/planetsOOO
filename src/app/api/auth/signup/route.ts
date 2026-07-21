@@ -18,6 +18,20 @@ interface SignupBody {
 
 export async function POST(request: Request) {
   try {
+    if (
+      (process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME) &&
+      !process.env.BLOB_READ_WRITE_TOKEN?.trim() &&
+      !process.env.ENTITLEMENT_DATA_PATH?.trim()
+    ) {
+      return NextResponse.json(
+        {
+          error:
+            "Account storage is not configured on this server. Add a Vercel Blob store (BLOB_READ_WRITE_TOKEN), then redeploy.",
+        },
+        { status: 503 },
+      );
+    }
+
     let body: SignupBody;
     try {
       body = (await request.json()) as SignupBody;
