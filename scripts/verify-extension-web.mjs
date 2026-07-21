@@ -70,26 +70,35 @@ for (const token of [
   }
 }
 
-const background = readFileSync(path.join(root, "extension/background.js"), "utf8");
-for (const needle of [
-  "/api/premium/verify",
-  "/api/premium/restore",
-  "www.planets.ooo",
-]) {
-  if (!background.includes(needle)) {
-    fail(`extension/background.js must reference ${needle}`);
+// Root /extension/ is intentionally omitted from Vercel uploads (.vercelignore).
+// Only assert packaged-extension sources when the folder is present (local/CI).
+const extensionDir = path.join(root, "extension");
+if (existsSync(extensionDir)) {
+  const background = readFileSync(path.join(extensionDir, "background.js"), "utf8");
+  for (const needle of [
+    "/api/premium/verify",
+    "/api/premium/restore",
+    "www.planets.ooo",
+  ]) {
+    if (!background.includes(needle)) {
+      fail(`extension/background.js must reference ${needle}`);
+    }
   }
-}
 
-const content = readFileSync(path.join(root, "extension/planetsContent.js"), "utf8");
-for (const needle of [
-  "orbit-screensaver-flight-mode",
-  "orbit-screensaver-speed",
-  "screensaver",
-]) {
-  if (!content.includes(needle)) {
-    fail(`extension/planetsContent.js must listen for / use ${needle}`);
+  const content = readFileSync(path.join(extensionDir, "planetsContent.js"), "utf8");
+  for (const needle of [
+    "orbit-screensaver-flight-mode",
+    "orbit-screensaver-speed",
+    "screensaver",
+  ]) {
+    if (!content.includes(needle)) {
+      fail(`extension/planetsContent.js must listen for / use ${needle}`);
+    }
   }
+} else {
+  console.log(
+    "verify-extension-web: skipping packaged extension/ checks (absent; expected on Vercel)",
+  );
 }
 
 /** .vercelignore must root-anchor dirs that also exist under src/. */
