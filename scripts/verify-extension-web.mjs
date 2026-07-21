@@ -71,10 +71,11 @@ for (const token of [
 }
 
 // Root /extension/ is intentionally omitted from Vercel uploads (.vercelignore).
-// Only assert packaged-extension sources when the folder is present (local/CI).
-const extensionDir = path.join(root, "extension");
-if (existsSync(extensionDir)) {
-  const background = readFileSync(path.join(extensionDir, "background.js"), "utf8");
+// Vercel may leave an empty extension/ directory after ignore — require real sources.
+const backgroundPath = path.join(root, "extension/background.js");
+const contentPath = path.join(root, "extension/planetsContent.js");
+if (existsSync(backgroundPath) && existsSync(contentPath)) {
+  const background = readFileSync(backgroundPath, "utf8");
   for (const needle of [
     "/api/premium/verify",
     "/api/premium/restore",
@@ -85,7 +86,7 @@ if (existsSync(extensionDir)) {
     }
   }
 
-  const content = readFileSync(path.join(extensionDir, "planetsContent.js"), "utf8");
+  const content = readFileSync(contentPath, "utf8");
   for (const needle of [
     "orbit-screensaver-flight-mode",
     "orbit-screensaver-speed",
