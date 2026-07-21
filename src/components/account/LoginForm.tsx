@@ -33,13 +33,27 @@ export function LoginForm() {
           ...(mode === "signup" ? { marketingOptIn } : {}),
         }),
       });
-      const data = (await res.json()) as {
+      const raw = await res.text();
+      let data: {
         error?: string;
         needsVerification?: boolean;
         verifyUrl?: string;
         message?: string;
         emailSent?: boolean;
-      };
+      } = {};
+      if (raw) {
+        try {
+          data = JSON.parse(raw) as typeof data;
+        } catch {
+          throw new Error(
+            res.ok
+              ? "Unexpected server response."
+              : `Signup failed (${res.status}). Try again shortly.`,
+          );
+        }
+      } else if (!res.ok) {
+        throw new Error(`Signup failed (${res.status}). Try again shortly.`);
+      }
 
       if (data.needsVerification || data.verifyUrl) {
         setInfo(

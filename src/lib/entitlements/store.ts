@@ -25,6 +25,10 @@ let writeChain: Promise<void> = Promise.resolve();
 function dataFilePath(): string {
   const configured = process.env.ENTITLEMENT_DATA_PATH?.trim();
   if (configured) return configured;
+  // Vercel serverless FS is read-only except /tmp (ephemeral per instance).
+  if (process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME) {
+    return "/tmp/planets-ooo-entitlements.json";
+  }
   return path.join(process.cwd(), "data", "entitlements.json");
 }
 
