@@ -20,13 +20,14 @@ export async function POST(request: Request) {
   try {
     if (
       (process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME) &&
+      !process.env.BLOB_STORE_ID?.trim() &&
       !process.env.BLOB_READ_WRITE_TOKEN?.trim() &&
       !process.env.ENTITLEMENT_DATA_PATH?.trim()
     ) {
       return NextResponse.json(
         {
           error:
-            "Account storage is not configured on this server. Add a Vercel Blob store (BLOB_READ_WRITE_TOKEN), then redeploy.",
+            "Account storage is not configured on this server. Connect a Vercel Blob store to this project (BLOB_STORE_ID), then redeploy.",
         },
         { status: 503 },
       );

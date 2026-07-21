@@ -25,12 +25,25 @@ const BLOB_PATHNAME = "planets-ooo/entitlements.json";
 
 let writeChain: Promise<void> = Promise.resolve();
 
-function blobToken(): string | undefined {
+function blobReadWriteToken(): string | undefined {
   return process.env.BLOB_READ_WRITE_TOKEN?.trim() || undefined;
 }
 
-function usesBlobStore(): boolean {
-  return Boolean(blobToken());
+function blobStoreId(): string | undefined {
+  return process.env.BLOB_STORE_ID?.trim() || undefined;
+}
+
+/** True when a connected Blob store is available (OIDC via BLOB_STORE_ID, or legacy RW token). */
+export function usesBlobStore(): boolean {
+  return Boolean(blobStoreId() || blobReadWriteToken());
+}
+
+function blobAuthOptions(): { token?: string; storeId?: string } {
+  const token = blobReadWriteToken();
+  if (token) return { token };
+  const storeId = blobStoreId();
+  if (storeId) return { storeId };
+  return {};
 }
 
 function dataFilePath(): string {
@@ -55,13 +68,11 @@ function normalizeDb(parsed: EntitlementDatabase): EntitlementDatabase {
 }
 
 async function readDbFromBlob(): Promise<EntitlementDatabase> {
-  const token = blobToken();
-  if (!token) return structuredClone(EMPTY_DB);
   try {
     const result = await blobGet(BLOB_PATHNAME, {
       access: "private",
-      token,
       useCache: false,
+      ...blobAuthOptions(),
     });
     if (!result?.stream) return structuredClone(EMPTY_DB);
     const raw = await new Response(result.stream).text();
@@ -73,16 +84,17 @@ async function readDbFromBlob(): Promise<EntitlementDatabase> {
 }
 
 async function writeDbToBlob(db: EntitlementDatabase): Promise<void> {
-  const token = blobToken();
-  if (!token) {
-    throw new Error("BLOB_READ_WRITE_TOKEN is not configured");
+  if (!usesBlobStore()) {
+    throw new Error(
+      "Blob store is not configured (need BLOB_STORE_ID or BLOB_READ_WRITE_TOKEN)",
+    );
   }
   await blobPut(BLOB_PATHNAME, JSON.stringify(db, null, 2), {
     access: "private",
     addRandomSuffix: false,
     allowOverwrite: true,
     contentType: "application/json",
-    token,
+    ...blobAuthOptions(),
   });
 }
 

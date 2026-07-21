@@ -26,7 +26,7 @@ async function completeVerification(token: string) {
   if (!user || user.email.trim().toLowerCase() !== payload.email) {
     return {
       error:
-        "This verification link is valid, but the account could not be found. Please sign up again (accounts need durable storage on Vercel — see SERVICES.txt / BLOB_READ_WRITE_TOKEN).",
+        "This verification link is valid, but the account could not be found. Please sign up again after Blob storage is connected (BLOB_STORE_ID) and redeployed.",
       status: 400 as const,
     };
   }
