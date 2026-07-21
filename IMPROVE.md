@@ -122,6 +122,7 @@ Keep the last ~10 entries. Delete rows that no longer teach you anything.
 | 2026-07-19 | Online needed spacecraft flight feel | Online FOV/thrust/look, cockpit HUD, no scenic autopilot | `/online` → click view → tighter flight |
 | 2026-07-20 | Vercel ignore stripped `/extension` + `src/data` | Root-anchor `/extension/` `/data/`; `verify:extension-web` | `npm run verify:extension-web`; curl `/extension` |
 | 2026-07-21 | Basic idle input didn’t close; page threw sendMessage without extId | Hosted close uses `extId`; content listeners sync | Store Basic idle: move/click closes window |
+| 2026-07-21 | Need verified login + admin multiplayer without Stripe | Email verify + `ADMIN_SUBSCRIPTION_EMAILS` effective sub | Sign up contact@ → verify link → `/online` subscribed |
 
 ---
 

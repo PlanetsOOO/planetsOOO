@@ -35,6 +35,7 @@ import {
   isScreensaverFlightCapable,
   isScreensaverMode,
   isMultiplayerMode,
+  isOnlineMode,
 } from "@/lib/screensaverConfig";
 import { activateScreensaverScenicTour } from "@/lib/screensaverScenic";
 
@@ -529,7 +530,7 @@ export function ExplorerProvider({ children }: { children: ReactNode }) {
 
       if (
         typeof window !== "undefined" &&
-        isMultiplayerMode()
+        (isMultiplayerMode() || isOnlineMode())
       ) {
         void fetch("/api/multiplayer/progression/discovery", {
           method: "POST",

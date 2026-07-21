@@ -4,6 +4,12 @@ import {
   signSessionToken,
 } from "@/lib/auth/session";
 import { verifyPassword } from "@/lib/auth/password";
+import {
+  buildVerifyEmailUrl,
+  isEmailVerified,
+  issueEmailVerification,
+} from "@/lib/auth/emailVerification";
+import { sendVerificationEmail } from "@/lib/auth/sendEmail";
 import { getUserByEmail } from "@/lib/entitlements/store";
 
 export const runtime = "nodejs";
@@ -38,13 +44,32 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Invalid email or password." }, { status: 401 });
   }
 
+  if (!isEmailVerified(user)) {
+    const issued = await issueEmailVerification(user);
+    const verifyUrl = buildVerifyEmailUrl(issued.token);
+    const mail = await sendVerificationEmail(user.email, verifyUrl);
+    return NextResponse.json(
+      {
+        error: "Verify your email before signing in.",
+        needsVerification: true,
+        emailSent: mail.sent,
+        ...(mail.sent ? {} : { verifyUrl }),
+      },
+      { status: 403 },
+    );
+  }
+
   const token = signSessionToken({
     kind: "user-session",
     userId: user.id,
     email: user.email,
   });
 
-  const response = NextResponse.json({ ok: true, userId: user.id, email: user.email });
+  const response = NextResponse.json({
+    ok: true,
+    userId: user.id,
+    email: user.email,
+  });
   response.cookies.set(SESSION_COOKIE, token, {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",

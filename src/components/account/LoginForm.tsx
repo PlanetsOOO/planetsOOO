@@ -10,21 +10,51 @@ export function LoginForm() {
   const [mode, setMode] = useState<"login" | "signup">("login");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [marketingOptIn, setMarketingOptIn] = useState(false);
   const [error, setError] = useState("");
+  const [info, setInfo] = useState("");
+  const [verifyUrl, setVerifyUrl] = useState("");
   const [loading, setLoading] = useState(false);
 
   async function onSubmit(event: FormEvent) {
     event.preventDefault();
     setLoading(true);
     setError("");
+    setInfo("");
+    setVerifyUrl("");
     try {
       const endpoint = mode === "login" ? "/api/auth/login" : "/api/auth/signup";
       const res = await fetch(endpoint, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify({
+          email,
+          password,
+          ...(mode === "signup" ? { marketingOptIn } : {}),
+        }),
       });
-      const data = (await res.json()) as { error?: string };
+      const data = (await res.json()) as {
+        error?: string;
+        needsVerification?: boolean;
+        verifyUrl?: string;
+        message?: string;
+        emailSent?: boolean;
+      };
+
+      if (data.needsVerification || data.verifyUrl) {
+        setInfo(
+          data.message ??
+            (data.emailSent
+              ? "Check your email for a verification link."
+              : "Verify your email to activate your account."),
+        );
+        if (data.verifyUrl) setVerifyUrl(data.verifyUrl);
+        if (!res.ok && res.status !== 403) {
+          setError(data.error ?? "Unable to authenticate.");
+        }
+        return;
+      }
+
       if (!res.ok) throw new Error(data.error ?? "Unable to authenticate.");
       const next = searchParams.get("next") ?? "/account";
       router.push(next);
@@ -42,7 +72,8 @@ export function LoginForm() {
         {mode === "login" ? "Sign in" : "Create account"}
       </h1>
       <p className="mt-3 text-sm leading-7 text-zinc-400">
-        Use your planets.ooo account for Orbit Multiplayer and extension linking.
+        Email and password for Orbit Online and account features. Verify your email
+        before signing in.
       </p>
       <form onSubmit={onSubmit} className="mt-6 space-y-4">
         <label className="block text-xs uppercase tracking-wider text-zinc-500">
@@ -66,7 +97,27 @@ export function LoginForm() {
             required
           />
         </label>
+        {mode === "signup" ? (
+          <label className="flex items-start gap-3 text-sm text-zinc-400">
+            <input
+              type="checkbox"
+              checked={marketingOptIn}
+              onChange={(e) => setMarketingOptIn(e.target.checked)}
+              className="mt-1"
+            />
+            <span>Email me Orbit product updates (optional).</span>
+          </label>
+        ) : null}
         {error ? <p className="text-sm text-rose-300">{error}</p> : null}
+        {info ? <p className="text-sm text-sky-200/90">{info}</p> : null}
+        {verifyUrl ? (
+          <p className="break-all text-xs leading-6 text-zinc-400">
+            Verification link:{" "}
+            <a href={verifyUrl} className="text-sky-300 underline">
+              {verifyUrl}
+            </a>
+          </p>
+        ) : null}
         <button
           type="submit"
           disabled={loading}
@@ -77,7 +128,12 @@ export function LoginForm() {
       </form>
       <button
         type="button"
-        onClick={() => setMode(mode === "login" ? "signup" : "login")}
+        onClick={() => {
+          setMode(mode === "login" ? "signup" : "login");
+          setError("");
+          setInfo("");
+          setVerifyUrl("");
+        }}
         className="mt-4 text-sm text-zinc-500 hover:text-zinc-300"
       >
         {mode === "login"

@@ -12,6 +12,14 @@ export interface UserRecord {
   passwordHash: string;
   passwordSalt: string;
   stripeCustomerId?: string;
+  /** Epoch ms when email was verified; null/absent = unverified. */
+  emailVerifiedAt?: number | null;
+  /** SHA-256 hash of the current email verification token. */
+  emailVerifyTokenHash?: string | null;
+  emailVerifyExpiresAt?: number | null;
+  /** Opt-in for Orbit product email updates (not a paid subscription). */
+  marketingOptIn?: boolean;
+  marketingOptInAt?: number | null;
   createdAt: number;
 }
 
@@ -52,6 +60,15 @@ export interface PlayerProgressionRecord {
   updatedAt: number;
 }
 
+/** Orbit Online profile — faction allegiance for the PC Online demo / subscription. */
+export interface OnlineProfileRecord {
+  userId: string;
+  factionId: string;
+  displayName: string;
+  /** Epoch ms when faction was chosen (cooldown hooks later). */
+  factionChosenAt: number;
+  updatedAt: number;
+}
 
 export interface EntitlementDatabase {
   users: Record<string, UserRecord>;
@@ -59,6 +76,7 @@ export interface EntitlementDatabase {
   subscriptions: Record<string, SubscriptionRecord>;
   extensionLinks: Record<string, ExtensionLinkRecord>;
   progression: Record<string, PlayerProgressionRecord>;
+  onlineProfiles: Record<string, OnlineProfileRecord>;
 }
 
 export function extensionLinkKey(extensionId: string, installId: string): string {

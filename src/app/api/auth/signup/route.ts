@@ -1,10 +1,11 @@
 import { NextResponse } from "next/server";
 import { randomUUID } from "node:crypto";
-import { hashPassword, verifyPassword } from "@/lib/auth/password";
+import { hashPassword } from "@/lib/auth/password";
 import {
-  SESSION_COOKIE,
-  signSessionToken,
-} from "@/lib/auth/session";
+  buildVerifyEmailUrl,
+  issueEmailVerification,
+} from "@/lib/auth/emailVerification";
+import { sendVerificationEmail } from "@/lib/auth/sendEmail";
 import { createUser, getUserByEmail } from "@/lib/entitlements/store";
 
 export const runtime = "nodejs";
@@ -12,6 +13,7 @@ export const runtime = "nodejs";
 interface SignupBody {
   email?: string;
   password?: string;
+  marketingOptIn?: boolean;
 }
 
 export async function POST(request: Request) {
@@ -24,6 +26,7 @@ export async function POST(request: Request) {
 
   const email = body.email?.trim().toLowerCase() ?? "";
   const password = body.password ?? "";
+  const marketingOptIn = Boolean(body.marketingOptIn);
   if (!email || !password || password.length < 8) {
     return NextResponse.json(
       { error: "Email and password (8+ characters) are required." },
@@ -36,27 +39,34 @@ export async function POST(request: Request) {
   }
 
   const { hash, salt } = hashPassword(password);
+  const now = Date.now();
   const user = await createUser({
     id: randomUUID(),
     email,
     passwordHash: hash,
     passwordSalt: salt,
-    createdAt: Date.now(),
+    emailVerifiedAt: null,
+    emailVerifyTokenHash: null,
+    emailVerifyExpiresAt: null,
+    marketingOptIn,
+    marketingOptInAt: marketingOptIn ? now : null,
+    createdAt: now,
   });
 
-  const token = signSessionToken({
-    kind: "user-session",
-    userId: user.id,
+  const issued = await issueEmailVerification(user);
+  const verifyUrl = buildVerifyEmailUrl(issued.token);
+  const mail = await sendVerificationEmail(user.email, verifyUrl);
+
+  // Never set a session until the email is verified.
+  return NextResponse.json({
+    ok: true,
+    needsVerification: true,
     email: user.email,
+    emailSent: mail.sent,
+    // One-time link for the browser that just signed up when mail isn't configured.
+    ...(mail.sent ? {} : { verifyUrl }),
+    message: mail.sent
+      ? "Check your email for a verification link."
+      : "Verify your email with the link below to activate your account.",
   });
-
-  const response = NextResponse.json({ ok: true, userId: user.id, email: user.email });
-  response.cookies.set(SESSION_COOKIE, token, {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-    sameSite: "lax",
-    path: "/",
-    maxAge: 60 * 60 * 24 * 30,
-  });
-  return response;
 }

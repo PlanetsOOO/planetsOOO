@@ -4,13 +4,14 @@
 |------|---------|---------|----------------|-------------|
 | **Basic** | Chrome extension scenic screensaver | Free | Hosted `planets.ooo/?screensaver=1&flight=0` | No |
 | **Premium extension** | Offline/manual flight | One-time ($2.99) | Packaged `screensaver-react.html` | No (solo flight only) |
-| **Multiplayer subscription** | Gamified shared exploration | Recurring (Stripe) | `planets.ooo` when logged in | Yes (web) |
+| **Multiplayer subscription** | Gamified shared exploration | Recurring (Stripe) or admin whitelist | `planets.ooo` when logged in + **verified email** | Yes (web) |
 | **Premium + subscription** | Extension multiplayer | Both above | Extension when online + linked account | Yes (extension) |
 
 ## Rules
 
 - Solo Premium flight is **never** gated behind subscription.
-- Web multiplayer requires an **active subscription** and planets.ooo login.
+- Web multiplayer requires an **active subscription** (Stripe or verified admin-whitelist email) and planets.ooo login.
+- Email addresses must be **verified** before session access to Online / multiplayer.
 - Extension multiplayer requires **Premium entitlement on the install**, **linked account**, and **active subscription**.
 - Offline Premium flight remains solo; multiplayer UI is disabled without network.
 

@@ -8,9 +8,13 @@ import {
   showExplorerChrome,
   isExtensionPackaged,
   isMultiplayerMode,
+  isOnlineMode,
 } from "@/lib/screensaverConfig";
 import { MultiplayerProvider } from "@/context/MultiplayerContext";
+import { OnlineProvider } from "@/context/OnlineContext";
 import { MultiplayerHud } from "./MultiplayerHud";
+import { OnlineHud } from "@/components/online/OnlineHud";
+import { OnlineFlightBootstrap } from "@/components/online/OnlineFlightBootstrap";
 import SolarSystemCanvas from "@/components/explorer/SolarSystemCanvas";
 import { MobileFlightControls } from "./MobileFlightControls";
 import { OptionsMenu } from "./OptionsMenu";
@@ -49,7 +53,8 @@ function GlobalShortcuts() {
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      const websiteFlight = !isExtensionPackaged() && navigationActive;
+  const websiteFlight =
+        !isExtensionPackaged() && !isOnlineMode() && navigationActive;
 
       if (
         e.key.toLowerCase() === "l" &&
@@ -113,14 +118,20 @@ function ExplorerShell() {
   const screensaver = useScreensaverMode();
   const extensionPremium = isExtensionPackaged();
   const multiplayerEnabled = isMultiplayerMode();
+  const onlineEnabled = isOnlineMode();
   const fullChrome = showExplorerChrome();
   const showFlightHud = fullChrome && (!screensaver || navigationActive);
-  const showFullHud = showFlightHud && !extensionPremium;
-  const showWebsiteExplorer = !screensaver && !extensionPremium;
+  const showFullHud = showFlightHud && !extensionPremium && !onlineEnabled;
+  const showWebsiteExplorer = !screensaver && !extensionPremium && !onlineEnabled;
   const showExtensionFlightHud = extensionPremium && navigationActive;
-  const showSpeedHud = extensionPremium ? showExtensionFlightHud : showFlightHud;
+  const showSpeedHud = onlineEnabled
+    ? navigationActive
+    : extensionPremium
+      ? showExtensionFlightHud
+      : showFlightHud;
   const hideCursor =
-    !mobileLandscape && (screensaver || navigationActive);
+    !mobileLandscape &&
+    (screensaver || (navigationActive && !onlineEnabled) || (onlineEnabled && navigationActive));
 
   return (
     <main
@@ -129,16 +140,17 @@ function ExplorerShell() {
       }`}
     >
       <SolarSystemCanvas />
-      {showFullHud && <MobileFlightControls />}
-      {(showFullHud || showExtensionFlightHud) && <FlightReticle />}
+      {(showFullHud || onlineEnabled) && <MobileFlightControls />}
+      {(showFullHud || showExtensionFlightHud || onlineEnabled) && <FlightReticle />}
       {showFullHud && <UtcClock />}
       {showSpeedHud && <SpeedHud />}
       {showFullHud && <OptionsMenu />}
       {showFullHud && <PlanetPanel />}
-      {!screensaver && <GuideLog />}
+      {!screensaver && !onlineEnabled && <GuideLog />}
       {showWebsiteExplorer && showFullHud && <NavigationHint />}
       {showWebsiteExplorer && showFullHud && <ExplorerLegalFooter />}
-      {multiplayerEnabled ? <MultiplayerHud /> : null}
+      {onlineEnabled ? <OnlineHud /> : null}
+      {multiplayerEnabled && !onlineEnabled ? <MultiplayerHud /> : null}
     </main>
   );
 }
@@ -146,16 +158,18 @@ function ExplorerShell() {
 function ExplorerChrome() {
   const screensaver = useScreensaverMode();
   const extensionPremium = isExtensionPackaged();
+  const onlineEnabled = isOnlineMode();
   const fullChrome = showExplorerChrome();
   const { navigationActive } = useExplorer();
   const showFlightHud = fullChrome && (!screensaver || navigationActive);
-  const showFullHud = showFlightHud && !extensionPremium;
+  const showFullHud = showFlightHud && !extensionPremium && !onlineEnabled;
 
   return (
     <>
       <ScreensaverBootstrap />
-      {showFullHud && <GlobalShortcuts />}
-      {fullChrome && <ScenicChromeController />}
+      {onlineEnabled ? <OnlineFlightBootstrap /> : null}
+      {(showFullHud || onlineEnabled) && <GlobalShortcuts />}
+      {fullChrome && !onlineEnabled && <ScenicChromeController />}
       <ExplorerShell />
       <ScreensaverBootOverlay />
     </>
@@ -164,13 +178,17 @@ function ExplorerChrome() {
 
 export function ExplorerView() {
   const multiplayerEnabled = isMultiplayerMode();
+  const onlineEnabled = isOnlineMode();
+  const syncEnabled = multiplayerEnabled || onlineEnabled;
 
   return (
     <ScreensaverBootGate>
       <ExplorerProvider>
-        <MultiplayerProvider enabled={multiplayerEnabled}>
-          <ExplorerChrome />
-        </MultiplayerProvider>
+        <OnlineProvider enabled={onlineEnabled}>
+          <MultiplayerProvider enabled={syncEnabled}>
+            <ExplorerChrome />
+          </MultiplayerProvider>
+        </OnlineProvider>
       </ExplorerProvider>
     </ScreensaverBootGate>
   );

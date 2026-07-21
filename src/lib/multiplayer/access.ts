@@ -5,15 +5,14 @@ import {
   verifySessionToken,
   type UserSessionPayload,
 } from "@/lib/auth/session";
+import { getEffectiveSubscriptionForUser } from "@/lib/auth/effectiveSubscription";
+import { isEmailVerified } from "@/lib/auth/emailVerification";
 import {
-  getActiveSubscriptionForUser,
   getExtensionLink,
   getPremiumPurchaseByInstall,
+  getUserById,
 } from "@/lib/entitlements/store";
-import {
-  isSubscriptionActive,
-  type SubscriptionRecord,
-} from "@/lib/entitlements/types";
+import type { SubscriptionRecord } from "@/lib/entitlements/types";
 import { verifyPremiumEntitlement } from "@/lib/premium/entitlement";
 
 export type MultiplayerSurface = "web" | "extension";
@@ -62,10 +61,21 @@ export async function canAccessMultiplayer(input: {
     };
   }
 
-  const subscription = await getActiveSubscriptionForUser(userId);
-  const subscriptionActive = subscription
-    ? isSubscriptionActive(subscription.status)
-    : false;
+  const user = await getUserById(userId);
+  if (!user || !isEmailVerified(user)) {
+    return {
+      multiplayer: false,
+      subscriptionActive: false,
+      extensionPremium: false,
+      linkedAccount: false,
+      userId,
+      reason: "Verify your email to access multiplayer.",
+    };
+  }
+
+  const effective = await getEffectiveSubscriptionForUser(userId);
+  const subscriptionActive = effective.active;
+  const subscription = effective.stripeSubscription;
 
   if (input.surface === "web") {
     return {
@@ -124,7 +134,8 @@ export async function canAccessMultiplayer(input: {
   } else if (!linkedAccount) {
     reason = "Link this extension install to your planets.ooo account.";
   } else if (!extensionPremium) {
-    reason = "Orbit Premium extension purchase is required for extension multiplayer.";
+    reason =
+      "Orbit Premium extension purchase is required for extension multiplayer.";
   }
 
   return {

@@ -42,7 +42,8 @@ import {
 import { markIdleOrbitUserActivity, idleOrbitState } from "@/lib/idleOrbitState";
 import { discoveryAutopilotState, markDiscoveryPovActivity } from "@/lib/discoveryAutopilot";
 import { flightReticleState } from "@/lib/flightReticleState";
-import { isExtensionPackaged, isExtensionScreensaverFlight } from "@/lib/screensaverConfig";
+import { isExtensionPackaged, isExtensionScreensaverFlight, isOnlineMode } from "@/lib/screensaverConfig";
+import { ONLINE_FLIGHT_FEEL } from "@/lib/online/flightFeel";
 import { RENDER_FRAME_PRIORITY } from "@/lib/renderFramePriority";
 import { viewerPosition } from "@/lib/viewerState";
 import { lightspeedState, resetLightspeedState } from "@/lib/warpState";
@@ -51,6 +52,21 @@ const MOUSE_SENSITIVITY = 0.0022;
 const WHEEL_LOOK_SENSITIVITY = 0.00018;
 const PITCH_LIMIT = Math.PI / 2 - 0.12;
 
+function onlineCraftActive(): boolean {
+  return isOnlineMode();
+}
+
+function lookSensitivity(): number {
+  return onlineCraftActive()
+    ? ONLINE_FLIGHT_FEEL.lookSensitivity
+    : MOUSE_SENSITIVITY;
+}
+
+function rollSpeed(): number {
+  return onlineCraftActive()
+    ? CAMERA_ROLL_SPEED * ONLINE_FLIGHT_FEEL.rollSpeed
+    : CAMERA_ROLL_SPEED;
+}
 
 function clampPitch(pitch: number): number {
   return THREE.MathUtils.clamp(pitch, -PITCH_LIMIT, PITCH_LIMIT);
@@ -399,7 +415,7 @@ export function FlightControls({
       applyLookDelta(
         e.movementX,
         e.movementY,
-        MOUSE_SENSITIVITY,
+        lookSensitivity(),
         yawRef,
         pitchRef,
         rollRef.current,
@@ -500,11 +516,12 @@ export function FlightControls({
       (pointerLocked && navigationActiveRef.current);
 
     if (canRoll) {
+      const roll = rollSpeed();
       if (keys.current.has("arrowleft")) {
-        rollRef.current += CAMERA_ROLL_SPEED * dt;
+        rollRef.current += roll * dt;
       }
       if (keys.current.has("arrowright")) {
-        rollRef.current -= CAMERA_ROLL_SPEED * dt;
+        rollRef.current -= roll * dt;
       }
     }
 
@@ -691,10 +708,15 @@ export function FlightControls({
       flightRef.current.lightspeedActive = true;
       flightRef.current.lightspeedIntensity = intensity;
     } else {
-      let responseRate = COAST_RESPONSE;
+      const craft = onlineCraftActive() ? ONLINE_FLIGHT_FEEL : null;
+      let responseRate = craft?.coastResponse ?? COAST_RESPONSE;
       const boost = travelSpeedRef.current;
-      const maxSpeed = BASE_MAX_SPEED * boost;
-      const maxThrust = BASE_MAX_THRUST * Math.sqrt(boost);
+      const maxSpeed =
+        BASE_MAX_SPEED * boost * (craft?.maxSpeed ?? 1);
+      const maxThrust =
+        BASE_MAX_THRUST *
+        Math.sqrt(boost) *
+        (craft?.maxThrust ?? 1);
 
       if (k.has("w")) inputDir.current.add(forward.current);
       if (k.has("s")) inputDir.current.sub(forward.current);
@@ -707,7 +729,7 @@ export function FlightControls({
       if (hasInput) {
         inputDir.current.normalize().multiplyScalar(maxThrust);
         target.copy(inputDir.current);
-        responseRate = THRUST_RESPONSE;
+        responseRate = craft?.thrustResponse ?? THRUST_RESPONSE;
       } else if (vel.lengthSq() > STOP_THRESHOLD * STOP_THRESHOLD) {
         applyCoastDrag(vel, accel, dt);
         newSpeed = vel.length();
@@ -816,7 +838,9 @@ export function FlightControls({
       const targetFov =
         warpEngaged || intensity > 0.02
           ? warpTargetFov(newSpeed, ludicrousBoost)
-          : BASE_FOV;
+          : onlineCraftActive()
+            ? ONLINE_FLIGHT_FEEL.baseFov
+            : BASE_FOV;
       cam.fov = THREE.MathUtils.lerp(cam.fov, targetFov, 1 - Math.exp(-4 * dt));
       cam.updateProjectionMatrix();
     }

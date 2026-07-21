@@ -17,10 +17,16 @@ export default function MultiplayerPage() {
             Explore together. Keep simulation truth local.
           </h1>
           <p className="mt-4 max-w-2xl text-sm leading-7 text-zinc-400">
-            Orbit Multiplayer is a subscription for shared rooms, co-discovery, and
-            gamified progression on planets.ooo. It is separate from the one-time
-            Premium extension purchase.
+            Orbit Online is the PC multiplayer franchise layer (factions, sessions,
+            future peace/war). Demos are available after you create a planets.ooo
+            account. It is separate from the one-time Premium extension purchase.
           </p>
+          <Link
+            href="/online"
+            className="mt-6 inline-block rounded-lg bg-cyan-500/20 px-4 py-2 text-sm text-cyan-100 ring-1 ring-cyan-300/30"
+          >
+            Enter Orbit Online demo
+          </Link>
         </header>
 
         <section className="grid gap-4 md:grid-cols-2">

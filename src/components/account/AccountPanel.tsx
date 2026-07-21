@@ -6,11 +6,19 @@ import { useEffect, useState } from "react";
 
 interface MeResponse {
   authenticated: boolean;
-  user?: { id: string; email: string };
+  needsVerification?: boolean;
+  email?: string;
+  user?: {
+    id: string;
+    email: string;
+    emailVerified?: boolean;
+    marketingOptIn?: boolean;
+  };
   subscription?: {
-    status: string;
+    status: string | null;
     active: boolean;
-    currentPeriodEnd: number;
+    source?: string;
+    currentPeriodEnd: number | null;
   } | null;
 }
 
@@ -19,6 +27,7 @@ export function AccountPanel() {
   const searchParams = useSearchParams();
   const [me, setMe] = useState<MeResponse | null>(null);
   const [loading, setLoading] = useState(true);
+  const [marketingSaving, setMarketingSaving] = useState(false);
 
   useEffect(() => {
     void fetch("/api/auth/me")
@@ -36,6 +45,28 @@ export function AccountPanel() {
     router.refresh();
   }
 
+  async function toggleMarketing(next: boolean) {
+    setMarketingSaving(true);
+    try {
+      const res = await fetch("/api/auth/me", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ marketingOptIn: next }),
+      });
+      if (!res.ok) return;
+      setMe((prev) =>
+        prev?.user
+          ? {
+              ...prev,
+              user: { ...prev.user, marketingOptIn: next },
+            }
+          : prev,
+      );
+    } finally {
+      setMarketingSaving(false);
+    }
+  }
+
   if (loading) {
     return <p className="text-sm text-zinc-500">Loading account…</p>;
   }
@@ -43,6 +74,7 @@ export function AccountPanel() {
   if (!me?.authenticated || !me.user) return null;
 
   const subscribed = me.subscription?.active ?? false;
+  const accessSource = me.subscription?.source;
 
   return (
     <div className="space-y-6">
@@ -57,6 +89,7 @@ export function AccountPanel() {
           Account
         </h1>
         <p className="mt-3 text-sm text-zinc-300">{me.user.email}</p>
+        <p className="mt-1 text-xs text-emerald-200/80">Email verified</p>
         <button
           type="button"
           onClick={() => void logout()}
@@ -68,41 +101,49 @@ export function AccountPanel() {
 
       <section className="rounded-2xl border border-white/10 bg-black/40 p-6">
         <h2 className="font-mono text-xs uppercase tracking-[0.25em] text-zinc-500">
-          Orbit Multiplayer
+          Email updates
         </h2>
         <p className="mt-3 text-sm leading-7 text-zinc-400">
+          Optional product notes from Orbit. Not a paid subscription.
+        </p>
+        <label className="mt-4 flex items-start gap-3 text-sm text-zinc-300">
+          <input
+            type="checkbox"
+            checked={Boolean(me.user.marketingOptIn)}
+            disabled={marketingSaving}
+            onChange={(e) => void toggleMarketing(e.target.checked)}
+            className="mt-1"
+          />
+          <span>Send me Orbit email updates</span>
+        </label>
+      </section>
+
+      <section className="rounded-2xl border border-cyan-300/20 bg-cyan-500/5 p-6">
+        <h2 className="font-mono text-xs uppercase tracking-[0.25em] text-cyan-200/80">
+          Orbit Online
+        </h2>
+        <p className="mt-3 text-sm leading-7 text-zinc-300">
           {subscribed
-            ? "Your subscription is active. Join shared rooms on the explorer or through the extension when Premium is linked."
-            : "Subscribe for gamified shared exploration on planets.ooo."}
+            ? accessSource === "admin"
+              ? "Complimentary subscribed access is active on this account."
+              : "Your subscription is active."
+            : "Enter the Online demo after signing in. Paid subscriptions come later."}
         </p>
         <div className="mt-4 flex flex-wrap gap-3">
+          <Link
+            href="/online"
+            className="rounded-lg bg-cyan-500/20 px-4 py-2 text-sm text-cyan-100 ring-1 ring-cyan-300/30"
+          >
+            Enter Orbit Online
+          </Link>
           {subscribed ? (
-            <>
-              <Link
-                href="/?multiplayer=1"
-                className="rounded-lg bg-sky-500/20 px-4 py-2 text-sm text-sky-100 ring-1 ring-sky-300/30"
-              >
-                Open multiplayer explorer
-              </Link>
-              <form action="/api/subscription/portal" method="post">
-                <button
-                  type="submit"
-                  className="rounded-lg px-4 py-2 text-sm text-zinc-400 ring-1 ring-white/10"
-                >
-                  Manage billing
-                </button>
-              </form>
-            </>
-          ) : (
-            <form action="/api/subscription/checkout" method="post">
-              <button
-                type="submit"
-                className="rounded-lg bg-sky-500/20 px-4 py-2 text-sm text-sky-100 ring-1 ring-sky-300/30"
-              >
-                Subscribe to Orbit Multiplayer
-              </button>
-            </form>
-          )}
+            <Link
+              href="/?multiplayer=1"
+              className="rounded-lg bg-sky-500/20 px-4 py-2 text-sm text-sky-100 ring-1 ring-sky-300/30"
+            >
+              Open multiplayer explorer
+            </Link>
+          ) : null}
         </div>
       </section>
 
@@ -111,14 +152,14 @@ export function AccountPanel() {
           Extension Premium
         </h2>
         <p className="mt-3 text-sm leading-7 text-zinc-400">
-          One-time Premium unlocks offline flight in the extension. Multiplayer in
-          the extension also requires an active subscription and account link.
+          One-time Premium unlocks offline flight in the Chrome extension. Purchase
+          from the extension popup when you are ready.
         </p>
         <Link
-          href="/premium"
+          href="/extension"
           className="mt-4 inline-block text-sm text-sky-200 hover:text-sky-100"
         >
-          Premium extension checkout
+          Get the Orbit Screensaver extension
         </Link>
       </section>
     </div>

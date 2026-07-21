@@ -11,7 +11,8 @@ import {
 } from "react";
 import type { MultiplayerAccessResult } from "@/lib/multiplayer/access";
 import type { MultiplayerRoom, PlayerSyncState } from "@/lib/multiplayer/syncTypes";
-import { isExtensionPackaged } from "@/lib/screensaverConfig";
+import { isExtensionPackaged, isOnlineMode } from "@/lib/screensaverConfig";
+import type { OnlineAccessResult } from "@/lib/online/access";
 
 interface MultiplayerContextValue {
   enabled: boolean;
@@ -66,6 +67,19 @@ export function MultiplayerProvider({
   const refreshAccess = useCallback(async () => {
     if (!enabled) {
       setAccess(null);
+      return;
+    }
+    if (isOnlineMode()) {
+      const res = await fetch("/api/online/access");
+      const online = (await res.json()) as OnlineAccessResult;
+      setAccess({
+        multiplayer: online.online,
+        subscriptionActive: online.subscriptionActive,
+        extensionPremium: false,
+        linkedAccount: true,
+        userId: online.userId,
+        reason: online.reason,
+      });
       return;
     }
     const headers = await readExtensionHeaders();

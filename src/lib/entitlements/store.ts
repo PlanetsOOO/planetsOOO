@@ -3,6 +3,7 @@ import path from "node:path";
 import type {
   EntitlementDatabase,
   ExtensionLinkRecord,
+  OnlineProfileRecord,
   PlayerProgressionRecord,
   PremiumPurchaseRecord,
   SubscriptionRecord,
@@ -16,6 +17,7 @@ const EMPTY_DB: EntitlementDatabase = {
   subscriptions: {},
   extensionLinks: {},
   progression: {},
+  onlineProfiles: {},
 };
 
 let writeChain: Promise<void> = Promise.resolve();
@@ -37,6 +39,7 @@ async function readDb(): Promise<EntitlementDatabase> {
       subscriptions: parsed.subscriptions ?? {},
       extensionLinks: parsed.extensionLinks ?? {},
       progression: parsed.progression ?? {},
+      onlineProfiles: parsed.onlineProfiles ?? {},
     };
   } catch {
     return structuredClone(EMPTY_DB);
@@ -74,6 +77,11 @@ export async function getUserByEmail(email: string): Promise<UserRecord | null> 
   return (
     Object.values(db.users).find((user) => user.email === normalized) ?? null
   );
+}
+
+export async function listUsers(): Promise<UserRecord[]> {
+  const db = await readDb();
+  return Object.values(db.users);
 }
 
 export async function createUser(record: UserRecord): Promise<UserRecord> {
@@ -246,3 +254,18 @@ export async function listLeaderboard(limit = 10): Promise<PlayerProgressionReco
     .slice(0, limit);
 }
 
+export async function getOnlineProfile(
+  userId: string,
+): Promise<OnlineProfileRecord | null> {
+  const db = await readDb();
+  return db.onlineProfiles[userId] ?? null;
+}
+
+export async function upsertOnlineProfile(
+  record: OnlineProfileRecord,
+): Promise<OnlineProfileRecord> {
+  await mutateDb((db) => {
+    db.onlineProfiles[record.userId] = record;
+  });
+  return record;
+}
